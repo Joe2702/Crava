@@ -1,54 +1,63 @@
 # Crava
 
-Crava is a bilingual (English / Arabic) skills-training app: users pick a physical
-skill (calisthenics, boxing, sprinting, parkour), work through a leveled skill tree
-of drills, track XP and streaks, book real coaches for form reviews or live
-sessions, and follow a community feed of milestones.
+Bilingual (English / Arabic) skills-training app. Users work through a leveled
+skill path of video drills, tracking XP and streaks, gated behind a Pro
+subscription.
 
-This is a React + TypeScript implementation of the `Crava App v2` design
-(handed off from Claude Design), built as a mobile-first web app.
+## Repository layout
 
-## Stack
+```
+mobile/   Expo (React Native) app — the product
+web/      Vite React app — the original design port; becomes the
+          marketing site and full-margin web checkout
+```
 
-- React 19 + TypeScript
-- Vite
-- No UI framework — styles are hand-ported inline to match the design pixel-for-pixel
+## v1 scope
 
-## Development
+Deliberately narrow: **Full Muscle-Up only, six levels, subscription only.**
+No coach marketplace, no community feed — those are deferred until the core
+loop is proven.
+
+## Backend
+
+Supabase project `crava` (`lzigkduqkkmfawlcczuf`, eu-central-1).
+
+Content lives in `skills` / `levels` / `drills`. Per-user state lives in
+`profiles`, `user_stats`, `user_drill_completions`, `user_level_completions`,
+and `entitlements`. RLS is on for every table; users can only touch their own
+rows, and content is readable only when `is_published`.
+
+Level completion goes through the `complete_level(uuid)` RPC rather than direct
+writes, so XP and streaks cannot be minted by a client. It refuses to complete a
+level whose required drills are unfinished, and replaying a finished level
+awards nothing. `entitlements` has no client write policy — only the RevenueCat
+webhook (service role) may write it.
+
+## Running the mobile app
 
 ```bash
+cd mobile
+cp .env.example .env      # fill in the publishable key
+npm install
+npx expo start
+```
+
+The Supabase publishable key is safe to ship in the bundle — it is protected by
+RLS, not secrecy.
+
+## Running the web app
+
+```bash
+cd web
 npm install
 npm run dev
 ```
 
-Open the printed local URL. The app is mobile-first: resize your browser to a
-phone-sized viewport (or use device emulation) for the intended layout. On
-wider viewports it renders inside a centered phone-sized card.
+## Still to do before launch
 
-## Build
-
-```bash
-npm run build
-```
-
-## Project structure
-
-```
-src/
-  data/          static content (skills, coaches, slots, community posts) + shared types
-  context/       AppContext — all app state (screen, language, progress, bookings, etc.)
-  lib/           shared inline-style helpers (list rows, radios, tabs, chips)
-  components/    Header, TabBar, LevelUpSheet, icon set
-  screens/       one component per screen (Onboarding, Home, Tree, Lesson, Search,
-                 Coaches, Booking, Paywall, Community, Profile)
-  App.tsx        screen router + phone shell layout
-```
-
-## Notes
-
-- Language toggle (EN / عربي) switches the whole UI, including layout direction
-  (`dir="rtl"` for Arabic) — logical CSS properties (`insetInlineStart`, etc.) are
-  used throughout so spacing/icons mirror correctly.
-- All app state (onboarding answers, unlocked levels, XP, streak, bookings,
-  likes, notification toggle) lives in memory only, matching the original
-  prototype. Profile → "Reset prototype data" restores the initial state.
+- Film and upload the six lesson videos; wire a video host (Mux / Cloudflare Stream)
+- RevenueCat + App Store / Play subscription products
+- Arabic typography (bundle IBM Plex Sans Arabic) and native RTL
+- Port remaining screens: onboarding, profile, paywall
+- Privacy policy, terms, account deletion (Apple requires it)
+- Push notifications for session reminders and streaks

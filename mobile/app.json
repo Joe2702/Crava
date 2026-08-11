@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Crava",
+    "slug": "crava",
+    "scheme": "crava",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.crava.app"
+    },
+    "android": {
+      "package": "com.crava.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E4341A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
