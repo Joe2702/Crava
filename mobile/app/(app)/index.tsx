@@ -1,17 +1,21 @@
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native' 
+import { Txt } from '../../components/Txt'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSkillPath } from '../../lib/useSkillPath'
-import { useAuth } from '../../lib/auth'
+import { localizeNumber, useLocale } from '../../lib/i18n'
+import { LanguageToggle } from '../../components/LanguageToggle'
 import { cardShadow, colors, radius } from '../../theme/tokens'
 
 const XP_MAX = 2000
 
 export default function Home() {
   const { data, loading, error, reload } = useSkillPath()
-  const { signOut } = useAuth()
+  const { t, field, locale } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
+
+  const n = (v: number) => localizeNumber(v, locale)
 
   if (loading) {
     return (
@@ -24,10 +28,14 @@ export default function Home() {
   if (error || !data) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12, backgroundColor: colors.bg }}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text }}>Could not load your path</Text>
-        <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center' }}>{error}</Text>
+        <Txt style={{ fontSize: 17, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+          {t('Could not load your path', 'تعذر تحميل مسارك')}
+        </Txt>
+        {error && <Txt style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center' }}>{error}</Txt>}
         <Pressable onPress={reload} accessibilityRole="button">
-          <Text style={{ color: colors.accent, fontWeight: '600', fontSize: 15, paddingVertical: 8 }}>Try again</Text>
+          <Txt style={{ color: colors.accent, fontWeight: '600', fontSize: 15, paddingVertical: 8 }}>
+            {t('Try again', 'حاول مرة أخرى')}
+          </Txt>
         </Pressable>
       </View>
     )
@@ -35,7 +43,6 @@ export default function Home() {
 
   const { skill, levels, stats, profile } = data
   const cleared = levels.filter((l) => l.state === 'done').length
-  const current = levels.find((l) => l.state === 'current')
   const xpPct = Math.min(100, Math.round((stats.xp / XP_MAX) * 100))
 
   return (
@@ -44,12 +51,36 @@ export default function Home() {
       contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32, gap: 18 }}
       refreshControl={<RefreshControl refreshing={false} onRefresh={reload} tintColor={colors.accent} />}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <View>
-          <Text style={{ fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>Welcome back</Text>
-          <Text style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
-            {profile.display_name || 'Athlete'}
-          </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Txt style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>Crava</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <LanguageToggle />
+          <Pressable
+            onPress={() => router.push('/profile')}
+            accessibilityRole="button"
+            accessibilityLabel={t('Profile', 'حسابي')}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: radius.pill,
+              backgroundColor: colors.fill,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Txt style={{ fontSize: 15 }}>☰</Txt>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ flexShrink: 1 }}>
+          <Txt style={{ fontSize: 13, fontWeight: '500', color: colors.textSecondary }}>
+            {t('Welcome back', 'أهلاً بعودتك')}
+          </Txt>
+          <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
+            {profile.display_name || t('Athlete', 'بطل')}
+          </Txt>
         </View>
         <View
           style={{
@@ -62,34 +93,52 @@ export default function Home() {
             paddingVertical: 8,
           }}
         >
-          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.accentDark }}>{stats.streak_count}</Text>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accentDark }}>day streak</Text>
+          <Txt style={{ fontSize: 17, fontWeight: '700', color: colors.accentDark }}>{n(stats.streak_count)}</Txt>
+          <Txt style={{ fontSize: 12, fontWeight: '600', color: colors.accentDark }}>
+            {t('day streak', 'يوم متتالي')}
+          </Txt>
         </View>
       </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, padding: 18, gap: 12, ...cardShadow }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>Progress</Text>
-          <Text style={{ fontSize: 13, color: colors.textSecondary }}>{stats.xp} / {XP_MAX} XP</Text>
+          <Txt style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{t('Progress', 'التقدم')}</Txt>
+          <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
+            {n(stats.xp)} / {n(XP_MAX)} XP
+          </Txt>
         </View>
         <View style={{ height: 12, borderRadius: radius.pill, backgroundColor: colors.fill, overflow: 'hidden' }}>
           <View style={{ height: '100%', width: `${xpPct}%`, backgroundColor: colors.accent, borderRadius: radius.pill }} />
         </View>
       </View>
 
-      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
-        {skill.name_en} · {cleared} of {levels.length} levels cleared
-      </Text>
+      <View>
+        <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
+          {t('Skill path', 'مسار المهارة')}
+        </Txt>
+        <Txt style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.8, color: colors.text, marginTop: 2 }}>
+          {field(skill, 'name')}
+        </Txt>
+        <Txt style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
+          {t(
+            `${cleared} of ${levels.length} levels cleared`,
+            `أنهيت ${n(cleared)} من ${n(levels.length)} مستويات`,
+          )}
+        </Txt>
+      </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
         {levels.map((l, i) => {
           const locked = l.state === 'locked'
+          const statusLabel =
+            l.state === 'done' ? t('Done', 'تم') : l.state === 'current' ? t('Next', 'التالي') : t('Locked', 'مغلق')
           return (
             <Pressable
               key={l.id}
               disabled={locked}
               accessibilityRole="button"
               accessibilityState={{ disabled: locked }}
+              accessibilityLabel={`${field(l, 'name')} — ${statusLabel}`}
               onPress={() => router.push({ pathname: '/level/[id]', params: { id: l.id } })}
               style={{
                 flexDirection: 'row',
@@ -112,19 +161,22 @@ export default function Home() {
                     l.state === 'done' ? 'rgba(52,199,89,0.14)' : l.state === 'current' ? colors.accent : colors.fill,
                 }}
               >
-                <Text
+                <Txt
                   style={{
                     fontSize: 15,
                     fontWeight: '600',
-                    color: l.state === 'done' ? colors.successDark : l.state === 'current' ? '#fff' : colors.textSecondary,
+                    color:
+                      l.state === 'done' ? colors.successDark : l.state === 'current' ? '#fff' : colors.textSecondary,
                   }}
                 >
-                  {l.state === 'done' ? '✓' : l.idx}
-                </Text>
+                  {l.state === 'done' ? '✓' : n(l.idx)}
+                </Txt>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{l.name_en}</Text>
-                <Text style={{ fontSize: 13, color: colors.textSecondary }}>4 drills · 12 min</Text>
+                <Txt style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{field(l, 'name')}</Txt>
+                <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
+                  {t('4 drills · 12 min', '٤ تمارين · ١٢ دقيقة')}
+                </Txt>
               </View>
               <View
                 style={{
@@ -134,32 +186,20 @@ export default function Home() {
                   backgroundColor: l.state === 'current' ? colors.accentTint : colors.fill,
                 }}
               >
-                <Text
+                <Txt
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
                     color: l.state === 'current' ? colors.accentDark : colors.textSecondary,
                   }}
                 >
-                  {l.state === 'done' ? 'Done' : l.state === 'current' ? 'Next' : 'Locked'}
-                </Text>
+                  {statusLabel}
+                </Txt>
               </View>
             </Pressable>
           )
         })}
       </View>
-
-      {current && (
-        <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center' }}>
-          Up next: {current.name_en}
-        </Text>
-      )}
-
-      <Pressable onPress={signOut} accessibilityRole="button">
-        <Text style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 15, paddingVertical: 12 }}>
-          Sign out
-        </Text>
-      </Pressable>
     </ScrollView>
   )
 }

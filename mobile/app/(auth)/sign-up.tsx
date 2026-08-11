@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { Link } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Txt } from '../../components/Txt'
 import { useAuth } from '../../lib/auth'
+import { useLocale } from '../../lib/i18n'
 import { ErrorText, Field, PrimaryButton } from '../../components/ui'
+import { LanguageToggle } from '../../components/LanguageToggle'
 import { colors } from '../../theme/tokens'
 
 export default function SignUp() {
   const { signUp } = useAuth()
+  const { t } = useLocale()
   const insets = useSafeAreaInsets()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -18,16 +22,16 @@ export default function SignUp() {
 
   const submit = async () => {
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
+      setError(t('Password must be at least 8 characters.', 'كلمة المرور يجب ألا تقل عن ٨ أحرف.'))
       return
     }
     setError(null)
     setBusy(true)
     try {
       await signUp(email.trim(), password, name.trim())
-      setNotice('Check your email to confirm your account.')
+      setNotice(t('Check your email to confirm your account.', 'تحقق من بريدك لتأكيد حسابك.'))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create account')
+      setError(e instanceof Error ? e.message : t('Could not create account', 'تعذر إنشاء الحساب'))
     } finally {
       setBusy(false)
     }
@@ -39,23 +43,33 @@ export default function SignUp() {
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 40, gap: 22, flexGrow: 1 }}
+        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 24, gap: 22, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <LanguageToggle />
+        </View>
+
         <View style={{ gap: 8 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>Crava</Text>
-          <Text style={{ fontSize: 34, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
-            Start training
-          </Text>
-          <Text style={{ fontSize: 15, lineHeight: 21, color: colors.textSecondary }}>
-            Six levels from dead hang to full muscle-up.
-          </Text>
+          <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>Crava</Txt>
+          <Txt style={{ fontSize: 34, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
+            {t('Start training', 'ابدأ التدريب')}
+          </Txt>
+          <Txt style={{ fontSize: 15, lineHeight: 23, color: colors.textSecondary }}>
+            {t('Six levels from dead hang to full muscle-up.', 'ستة مستويات من التعليق الميت إلى المسل أب الكامل.')}
+          </Txt>
         </View>
 
         <View style={{ gap: 14 }}>
-          <Field label="Name" value={name} onChangeText={setName} autoComplete="name" placeholder="Your name" />
           <Field
-            label="Email"
+            label={t('Name', 'الاسم')}
+            value={name}
+            onChangeText={setName}
+            autoComplete="name"
+            placeholder={t('Your name', 'اسمك')}
+          />
+          <Field
+            label={t('Email', 'البريد الإلكتروني')}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -64,23 +78,23 @@ export default function SignUp() {
             placeholder="you@example.com"
           />
           <Field
-            label="Password"
+            label={t('Password', 'كلمة المرور')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder={t('At least 8 characters', '٨ أحرف على الأقل')}
           />
           {error && <ErrorText>{error}</ErrorText>}
-          {notice && <Text style={{ color: colors.successDark, fontSize: 14 }}>{notice}</Text>}
-          <PrimaryButton label="Create account" onPress={submit} busy={busy} />
+          {notice && <Txt style={{ color: colors.successDark, fontSize: 14 }}>{notice}</Txt>}
+          <PrimaryButton label={t('Create account', 'أنشئ حساباً')} onPress={submit} busy={busy} />
         </View>
 
         <View style={{ marginTop: 'auto', alignItems: 'center', paddingBottom: insets.bottom + 12 }}>
           <Link href="/sign-in" accessibilityRole="link">
-            <Text style={{ fontSize: 15, color: colors.textSecondary }}>
-              Already have an account? <Text style={{ color: colors.accent, fontWeight: '600' }}>Sign in</Text>
-            </Text>
+            <Txt style={{ fontSize: 15, color: colors.accent, fontWeight: '600' }}>
+              {t('Already have an account? Sign in', 'لديك حساب بالفعل؟ سجّل الدخول')}
+            </Txt>
           </Link>
         </View>
       </ScrollView>

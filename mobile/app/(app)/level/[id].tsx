@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native' 
+import { Txt } from '../../../components/Txt'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../../lib/supabase'
 import type { Tables } from '../../../lib/database.types'
+import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { PrimaryButton } from '../../../components/ui'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
@@ -11,6 +13,7 @@ export default function LevelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { t, field, locale, isRTL } = useLocale()
 
   const [level, setLevel] = useState<Tables<'levels'> | null>(null)
   const [drills, setDrills] = useState<Tables<'drills'>[]>([])
@@ -18,13 +21,15 @@ export default function LevelScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const n = (v: number) => localizeNumber(v, locale)
+
   const load = useCallback(async () => {
     const [levelRes, drillRes] = await Promise.all([
       supabase.from('levels').select('*').eq('id', id).single(),
       supabase.from('drills').select('*').eq('level_id', id).order('idx'),
     ])
     if (levelRes.error || drillRes.error) {
-      Alert.alert('Could not load lesson', levelRes.error?.message ?? drillRes.error?.message)
+      Alert.alert(t('Could not load lesson', 'تعذر تحميل الدرس'), levelRes.error?.message ?? drillRes.error?.message)
       setLoading(false)
       return
     }
@@ -37,7 +42,7 @@ export default function LevelScreen() {
     setDrills(drillRes.data)
     setDone(new Set(completions.data?.map((c) => c.drill_id) ?? []))
     setLoading(false)
-  }, [id])
+  }, [id, t])
 
   useEffect(() => {
     void load()
@@ -69,7 +74,7 @@ export default function LevelScreen() {
         else next.delete(drillId)
         return next
       })
-      Alert.alert('Could not save', error.message)
+      Alert.alert(t('Could not save', 'تعذر الحفظ'), error.message)
     }
   }
 
@@ -78,16 +83,19 @@ export default function LevelScreen() {
     const { data, error } = await supabase.rpc('complete_level', { p_level_id: id })
     setSaving(false)
     if (error) {
-      Alert.alert('Could not complete level', error.message)
+      Alert.alert(t('Could not complete level', 'تعذر إنهاء المستوى'), error.message)
       return
     }
     const result = data?.[0]
     Alert.alert(
-      result?.already_completed ? 'Already cleared' : 'Level cleared',
+      result?.already_completed ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
       result?.already_completed
-        ? 'You have already finished this level.'
-        : `+120 XP · ${result?.streak_count} day streak`,
-      [{ text: 'Continue', onPress: () => router.back() }],
+        ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
+        : t(
+            `+120 XP · ${result?.streak_count} day streak`,
+            `+١٢٠ نقطة · ${n(result?.streak_count ?? 0)} يوم متتالي`,
+          ),
+      [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
     )
   }
 
@@ -108,7 +116,9 @@ export default function LevelScreen() {
     >
       <Pressable onPress={() => router.back()} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
         <View style={{ backgroundColor: colors.fill, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>‹ Back</Text>
+          <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+            {isRTL ? 'رجوع ›' : '‹ Back'}
+          </Txt>
         </View>
       </Pressable>
 
@@ -119,20 +129,26 @@ export default function LevelScreen() {
           backgroundColor: '#232326',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
+          paddingHorizontal: 24,
         }}
       >
-        <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
-          {level?.video_id ? 'Video ready' : 'Video not uploaded yet'}
-        </Text>
+        <Txt style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, textAlign: 'center' }}>
+          {level?.video_id
+            ? t('Video ready', 'الفيديو جاهز')
+            : t('Video not uploaded yet', 'لم يتم رفع الفيديو بعد')}
+        </Txt>
       </View>
 
       <View>
-        <Text style={{ fontSize: 28, fontWeight: '700', letterSpacing: -0.8, color: colors.text }}>
-          {level?.name_en}
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 6 }}>Level {level?.idx} of 6</Text>
+        <Txt style={{ fontSize: 28, fontWeight: '700', letterSpacing: -0.8, color: colors.text }}>
+          {level ? field(level, 'name') : ''}
+        </Txt>
+        <Txt style={{ fontSize: 14, color: colors.textSecondary, marginTop: 6 }}>
+          {t(`Level ${level?.idx} of 6`, `المستوى ${n(level?.idx ?? 0)} من ٦`)}
+        </Txt>
       </View>
+
+      <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>{t('Drills', 'التمارين')}</Txt>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
         {drills.map((d, i) => {
@@ -143,6 +159,7 @@ export default function LevelScreen() {
               onPress={() => toggleDrill(d.id)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isDone }}
+              accessibilityLabel={field(d, 'name')}
               style={{
                 flexDirection: 'row',
                 alignItems: 'flex-start',
@@ -162,10 +179,10 @@ export default function LevelScreen() {
                   backgroundColor: isDone ? colors.accent : 'rgba(118,118,128,0.14)',
                 }}
               >
-                {isDone && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✓</Text>}
+                {isDone && <Txt style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>✓</Txt>}
               </View>
               <View style={{ flex: 1 }}>
-                <Text
+                <Txt
                   style={{
                     fontSize: 16,
                     fontWeight: '600',
@@ -173,12 +190,12 @@ export default function LevelScreen() {
                     textDecorationLine: isDone ? 'line-through' : 'none',
                   }}
                 >
-                  {d.name_en}
-                </Text>
-                <Text style={{ fontSize: 13, color: colors.textSecondary }}>
-                  {d.meta_en}
-                  {d.is_required ? '' : ' · optional'}
-                </Text>
+                  {field(d, 'name')}
+                </Txt>
+                <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
+                  {field(d, 'meta')}
+                  {d.is_required ? '' : t(' · optional', ' · اختياري')}
+                </Txt>
               </View>
             </Pressable>
           )
@@ -186,7 +203,11 @@ export default function LevelScreen() {
       </View>
 
       <PrimaryButton
-        label={requiredDone ? 'Mark level complete · +120 XP' : 'Finish the drills to unlock'}
+        label={
+          requiredDone
+            ? t('Mark level complete · +120 XP', 'أنهِ المستوى · +١٢٠ نقطة')
+            : t('Finish the drills to unlock', 'أكمل التمارين للفتح')
+        }
         onPress={complete}
         disabled={!requiredDone}
         busy={saving}

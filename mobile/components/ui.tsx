@@ -1,11 +1,11 @@
 import {
   ActivityIndicator,
   Pressable,
-  Text,
   TextInput,
   View,
   type TextInputProps,
 } from 'react-native'
+import { Txt } from './Txt'
 import { colors, radius } from '../theme/tokens'
 
 export function PrimaryButton({
@@ -38,9 +38,9 @@ export function PrimaryButton({
       {busy ? (
         <ActivityIndicator color={colors.textSecondary} />
       ) : (
-        <Text style={{ color: inactive ? colors.textSecondary : '#fff', fontSize: 17, fontWeight: '600' }}>
+        <Txt style={{ color: inactive ? colors.textSecondary : '#fff', fontSize: 17, fontWeight: '600' }}>
           {label}
-        </Text>
+        </Txt>
       )}
     </Pressable>
   )
@@ -49,7 +49,7 @@ export function PrimaryButton({
 export function Field({ label, ...props }: { label: string } & TextInputProps) {
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>{label}</Text>
+      <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>{label}</Txt>
       <TextInput
         placeholderTextColor={colors.textTertiary}
         style={{
@@ -67,5 +67,5 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
 }
 
 export function ErrorText({ children }: { children: string }) {
-  return <Text style={{ color: colors.accentDark, fontSize: 14, lineHeight: 20 }}>{children}</Text>
+  return <Txt style={{ color: colors.accentDark, fontSize: 14, lineHeight: 20 }}>{children}</Txt>
 }

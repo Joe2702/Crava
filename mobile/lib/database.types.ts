@@ -121,6 +121,10 @@ export type Database = {
         Args: { p_level_id: string }
         Returns: { xp: number; streak_count: number; already_completed: boolean }[]
       }
+      delete_account: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
