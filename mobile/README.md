@@ -46,6 +46,30 @@ yet" — no lessons have been filmed.
 - Stale cache after pulling → `npx expo start -c`
 - Anything else: capture the red error screen text, it names the file and line.
 
+## Build an installable APK
+
+The build runs on Expo's servers, so no Android SDK is needed locally.
+
+```bash
+cd mobile
+npm install -g eas-cli
+eas login          # free Expo account
+eas init           # links the project, writes extra.eas.projectId into app.json
+eas build --platform android --profile preview
+```
+
+The `preview` profile is configured to emit an **APK** (not an AAB), which is
+what installs directly on a phone. When the build finishes, EAS prints a
+download URL and also shows a QR code — open it on the phone and install.
+Android will warn about installing outside the Play Store; allow it.
+
+No Google Play account is needed for this. `production` emits an AAB instead,
+which is only for Play Store submission.
+
+There is also a **Build Android APK** GitHub Action (manual trigger) that does
+the same thing from CI. It needs an `EXPO_TOKEN` repository secret, generated
+at <https://expo.dev/settings/access-tokens>.
+
 ## Environment
 
 `.env` is committed on purpose: it holds only `EXPO_PUBLIC_*` values, which are
