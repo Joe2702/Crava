@@ -26,7 +26,7 @@ function Loading() {
 }
 
 function AuthGate() {
-  const { session, loading } = useAuth()
+  const { user, loading } = useAuth()
   const { ready, isRTL } = useLocale()
   const segments = useSegments()
   const router = useRouter()
@@ -34,9 +34,9 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return
     const inAuthGroup = segments[0] === '(auth)'
-    if (!session && !inAuthGroup) router.replace('/sign-in')
-    else if (session && inAuthGroup) router.replace('/')
-  }, [session, loading, segments, router])
+    if (!user && !inAuthGroup) router.replace('/sign-in')
+    else if (user && inAuthGroup) router.replace('/')
+  }, [user, loading, segments, router])
 
   if (loading || !ready) return <Loading />
 

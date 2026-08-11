@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native' 
-import { Txt } from '../../../components/Txt'
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { supabase } from '../../../lib/supabase'
-import type { Tables } from '../../../lib/database.types'
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { Txt } from '../../../components/Txt'
+import { db, functions } from '../../../lib/firebase'
+import { useAuth } from '../../../lib/auth'
+import type { CompleteLevelResult, Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { PrimaryButton } from '../../../components/ui'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
@@ -13,10 +16,11 @@ export default function LevelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { user } = useAuth()
   const { t, field, locale, isRTL } = useLocale()
 
-  const [level, setLevel] = useState<Tables<'levels'> | null>(null)
-  const [drills, setDrills] = useState<Tables<'drills'>[]>([])
+  const [level, setLevel] = useState<Level | null>(null)
+  const [drills, setDrills] = useState<Drill[]>([])
   const [done, setDone] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -24,34 +28,33 @@ export default function LevelScreen() {
   const n = (v: number) => localizeNumber(v, locale)
 
   const load = useCallback(async () => {
-    const [levelRes, drillRes] = await Promise.all([
-      supabase.from('levels').select('*').eq('id', id).single(),
-      supabase.from('drills').select('*').eq('level_id', id).order('idx'),
-    ])
-    if (levelRes.error || drillRes.error) {
-      Alert.alert(t('Could not load lesson', 'تعذر تحميل الدرس'), levelRes.error?.message ?? drillRes.error?.message)
+    if (!user || !id) return
+    try {
+      const [levelSnap, drillSnap, doneSnap] = await Promise.all([
+        getDoc(doc(db, 'levels', id)),
+        getDocs(query(collection(db, 'drills'), where('levelId', '==', id), orderBy('idx'))),
+        getDocs(collection(db, 'users', user.uid, 'drillCompletions')),
+      ])
+      if (!levelSnap.exists()) throw new Error('Level not found')
+      setLevel({ id: levelSnap.id, ...levelSnap.data() } as Level)
+      setDrills(drillSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Drill))
+      setDone(new Set(doneSnap.docs.map((d) => d.id)))
+    } catch (e) {
+      Alert.alert(t('Could not load lesson', 'تعذر تحميل الدرس'), e instanceof Error ? e.message : '')
+    } finally {
       setLoading(false)
-      return
     }
-    const completions = await supabase
-      .from('user_drill_completions')
-      .select('drill_id')
-      .in('drill_id', drillRes.data.map((d) => d.id))
-
-    setLevel(levelRes.data)
-    setDrills(drillRes.data)
-    setDone(new Set(completions.data?.map((c) => c.drill_id) ?? []))
-    setLoading(false)
-  }, [id, t])
+  }, [id, user, t])
 
   useEffect(() => {
     void load()
   }, [load])
 
   const toggleDrill = async (drillId: string) => {
+    if (!user) return
     const wasDone = done.has(drillId)
-    // optimistic — the row is owned by this user and guarded by RLS, so the
-    // only realistic failure is offline, which the revert below handles
+    // optimistic — this write grants nothing on its own, and the Cloud Function
+    // re-checks completions server-side before awarding anything
     setDone((prev) => {
       const next = new Set(prev)
       if (wasDone) next.delete(drillId)
@@ -59,44 +62,41 @@ export default function LevelScreen() {
       return next
     })
 
-    const { data: userData } = await supabase.auth.getUser()
-    const userId = userData.user?.id
-    if (!userId) return
-
-    const { error } = wasDone
-      ? await supabase.from('user_drill_completions').delete().eq('drill_id', drillId).eq('user_id', userId)
-      : await supabase.from('user_drill_completions').insert({ drill_id: drillId, user_id: userId })
-
-    if (error) {
+    const ref = doc(db, 'users', user.uid, 'drillCompletions', drillId)
+    try {
+      if (wasDone) await deleteDoc(ref)
+      else await setDoc(ref, { completedAt: serverTimestamp() })
+    } catch (e) {
       setDone((prev) => {
         const next = new Set(prev)
         if (wasDone) next.add(drillId)
         else next.delete(drillId)
         return next
       })
-      Alert.alert(t('Could not save', 'تعذر الحفظ'), error.message)
+      Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')
     }
   }
 
   const complete = async () => {
     setSaving(true)
-    const { data, error } = await supabase.rpc('complete_level', { p_level_id: id })
-    setSaving(false)
-    if (error) {
-      Alert.alert(t('Could not complete level', 'تعذر إنهاء المستوى'), error.message)
-      return
+    try {
+      const call = httpsCallable<{ levelId: string }, CompleteLevelResult>(functions, 'completeLevel')
+      const { data } = await call({ levelId: id })
+      Alert.alert(
+        data.alreadyCompleted ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
+        data.alreadyCompleted
+          ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
+          : t(
+              `+120 XP · ${data.streakCount} day streak`,
+              `+١٢٠ نقطة · ${n(data.streakCount)} يوم متتالي`,
+            ),
+        [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
+      )
+    } catch (e) {
+      Alert.alert(t('Could not complete level', 'تعذر إنهاء المستوى'), e instanceof Error ? e.message : '')
+    } finally {
+      setSaving(false)
     }
-    const result = data?.[0]
-    Alert.alert(
-      result?.already_completed ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
-      result?.already_completed
-        ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
-        : t(
-            `+120 XP · ${result?.streak_count} day streak`,
-            `+١٢٠ نقطة · ${n(result?.streak_count ?? 0)} يوم متتالي`,
-          ),
-      [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
-    )
   }
 
   if (loading) {
@@ -107,7 +107,7 @@ export default function LevelScreen() {
     )
   }
 
-  const requiredDone = drills.filter((d) => d.is_required).every((d) => done.has(d.id))
+  const requiredDone = drills.filter((d) => d.isRequired).every((d) => done.has(d.id))
 
   return (
     <ScrollView
@@ -116,9 +116,7 @@ export default function LevelScreen() {
     >
       <Pressable onPress={() => router.back()} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
         <View style={{ backgroundColor: colors.fill, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9 }}>
-          <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-            {isRTL ? 'رجوع ›' : '‹ Back'}
-          </Txt>
+          <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{isRTL ? 'رجوع ›' : '‹ Back'}</Txt>
         </View>
       </Pressable>
 
@@ -133,9 +131,7 @@ export default function LevelScreen() {
         }}
       >
         <Txt style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, textAlign: 'center' }}>
-          {level?.video_id
-            ? t('Video ready', 'الفيديو جاهز')
-            : t('Video not uploaded yet', 'لم يتم رفع الفيديو بعد')}
+          {level?.videoId ? t('Video ready', 'الفيديو جاهز') : t('Video not uploaded yet', 'لم يتم رفع الفيديو بعد')}
         </Txt>
       </View>
 
@@ -194,7 +190,7 @@ export default function LevelScreen() {
                 </Txt>
                 <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
                   {field(d, 'meta')}
-                  {d.is_required ? '' : t(' · optional', ' · اختياري')}
+                  {d.isRequired ? '' : t(' · optional', ' · اختياري')}
                 </Txt>
               </View>
             </Pressable>

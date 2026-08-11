@@ -14,19 +14,17 @@ npx expo start
 3. Your phone and computer must be on the same Wi-Fi. If they aren't, or the
    connection hangs, run `npx expo start --tunnel` instead.
 
+### Before it will run
+
+The app needs a Firebase project. Follow `firebase/README.md` first — create the
+project, enable Email/Password auth, create Firestore, deploy the rules and
+functions, seed the content, then fill in `mobile/.env`. Without that the app
+throws on startup with a message naming the missing config.
+
 ### Sign in
 
-A pre-confirmed dev account exists so you can skip the email round-trip:
-
-```
-test@crava.app
-cravatest123
-```
-
-Creating a fresh account works too, but Supabase's built-in mailer is
-rate-limited to a few messages an hour. To remove that friction during
-development, turn off **Authentication → Providers → Email → Confirm email**
-in the Supabase dashboard.
+Create an account from the sign-up screen. Firebase Auth does not require email
+confirmation by default, so you are signed straight in.
 
 ### What to try
 
@@ -72,7 +70,10 @@ at <https://expo.dev/settings/access-tokens>.
 
 ## Environment
 
-`.env` is committed on purpose: it holds only `EXPO_PUBLIC_*` values, which are
-compiled into the app bundle and are therefore not secrets. The Supabase
-publishable key is protected by row-level security, not by being hidden. **Never
-put a service-role key in this file.**
+`.env` is git-ignored; copy `.env.example` and fill it from the Firebase console
+(Project settings → General → Your apps → Web app).
+
+Those `EXPO_PUBLIC_*` values are compiled into the app bundle and are not
+secrets — Firebase web config is public by design, and access is controlled by
+Firestore security rules. **A service-account key is a real secret and must
+never go in this file.**

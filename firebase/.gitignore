@@ -1,0 +1,6 @@
+node_modules/
+# real secret, unlike the public web config
+seed/serviceAccount.json
+*serviceAccount*.json
+.firebase/
+firebase-debug.log

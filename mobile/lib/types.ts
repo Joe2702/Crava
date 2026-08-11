@@ -1,0 +1,62 @@
+export interface Skill {
+  id: string
+  name_en: string
+  name_ar: string
+  category_en: string
+  category_ar: string
+  coach_name_en: string
+  coach_name_ar: string
+  sortOrder: number
+  isPublished: boolean
+}
+
+export interface Level {
+  id: string
+  skillId: string
+  idx: number
+  name_en: string
+  name_ar: string
+  videoId: string | null
+  durationS: number | null
+  isPublished: boolean
+}
+
+export interface Drill {
+  id: string
+  levelId: string
+  idx: number
+  name_en: string
+  name_ar: string
+  meta_en: string
+  meta_ar: string
+  isRequired: boolean
+}
+
+/**
+ * One document per user. `xp`, `streakCount` and `lastSessionDate` are written
+ * only by the completeLevel Cloud Function — security rules reject client
+ * writes to them.
+ */
+export interface UserDoc {
+  displayName: string | null
+  locale: 'en' | 'ar'
+  city: string | null
+  notifEnabled: boolean
+  onboardedAt: number | null
+  createdAt: number
+  xp: number
+  streakCount: number
+  lastSessionDate: string | null
+  entitlement: {
+    productId: string
+    status: 'active' | 'trialing' | 'expired' | 'cancelled' | 'grace'
+    source: 'ios' | 'android' | 'web' | 'promo'
+    expiresAt: number | null
+  } | null
+}
+
+export interface CompleteLevelResult {
+  xp: number
+  streakCount: number
+  alreadyCompleted: boolean
+}

@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getLocales } from 'expo-localization'
-import { supabase } from './supabase'
+import { doc, updateDoc } from 'firebase/firestore'
+import { auth, db } from './firebase'
 
 export type Locale = 'en' | 'ar'
 
@@ -49,10 +50,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)
     void AsyncStorage.setItem(STORAGE_KEY, next)
-    // best-effort sync so the choice follows the account to another device
-    void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) void supabase.from('profiles').update({ locale: next }).eq('id', data.user.id)
-    })
+    // best-effort sync so the choice follows the account to another device;
+    // failure here must not block the UI from switching language
+    const uid = auth.currentUser?.uid
+    if (uid) void updateDoc(doc(db, 'users', uid), { locale: next }).catch(() => {})
   }, [])
 
   const value = useMemo<LocaleValue>(() => {

@@ -3,7 +3,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, View } from 'r
 import { Txt } from '../../components/Txt'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { supabase } from '../../lib/supabase'
+import { doc, updateDoc } from 'firebase/firestore'
+import { db } from '../../lib/firebase'
 import { useAuth } from '../../lib/auth'
 import { localizeNumber, useLocale } from '../../lib/i18n'
 import { useSkillPath } from '../../lib/useSkillPath'
@@ -12,7 +13,7 @@ import { cardShadow, colors, radius } from '../../theme/tokens'
 
 export default function Profile() {
   const { data, loading, reload } = useSkillPath()
-  const { signOut } = useAuth()
+  const { signOut, deleteAccount, user: authUser } = useAuth()
   const { t, locale, isRTL } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -28,13 +29,17 @@ export default function Profile() {
     )
   }
 
-  const { stats, profile, levels } = data
+  const { user, levels } = data
   const cleared = levels.filter((l) => l.state === 'done').length
 
   const toggleNotif = async (value: boolean) => {
-    const { error } = await supabase.from('profiles').update({ notif_enabled: value }).eq('id', profile.id)
-    if (error) Alert.alert(t('Could not save', 'تعذر الحفظ'), error.message)
-    else void reload()
+    if (!authUser) return
+    try {
+      await updateDoc(doc(db, 'users', authUser.uid), { notifEnabled: value })
+      void reload()
+    } catch (e) {
+      Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')
+    }
   }
 
   const confirmDelete = () => {
@@ -51,13 +56,13 @@ export default function Profile() {
           style: 'destructive',
           onPress: async () => {
             setBusy(true)
-            const { error } = await supabase.rpc('delete_account')
-            setBusy(false)
-            if (error) {
-              Alert.alert(t('Could not delete account', 'تعذر حذف الحساب'), error.message)
-              return
+            try {
+              await deleteAccount()
+            } catch (e) {
+              Alert.alert(t('Could not delete account', 'تعذر حذف الحساب'), e instanceof Error ? e.message : '')
+            } finally {
+              setBusy(false)
             }
-            await supabase.auth.signOut()
           },
         },
       ],
@@ -83,13 +88,13 @@ export default function Profile() {
       </Pressable>
 
       <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
-        {profile.display_name || t('Athlete', 'بطل')}
+        {user.displayName || t('Athlete', 'بطل')}
       </Txt>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {stat(n(cleared), t('Levels', 'مستويات'))}
-        {stat(n(stats.streak_count), t('Day streak', 'يوم متتالي'))}
-        {stat(n(stats.xp), 'XP')}
+        {stat(n(user.streakCount), t('Day streak', 'يوم متتالي'))}
+        {stat(n(user.xp), 'XP')}
       </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
@@ -118,7 +123,7 @@ export default function Profile() {
         >
           <Txt style={{ fontSize: 16, color: colors.text }}>{t('Notifications', 'الإشعارات')}</Txt>
           <Switch
-            value={profile.notif_enabled}
+            value={user.notifEnabled}
             onValueChange={toggleNotif}
             trackColor={{ true: colors.success, false: 'rgba(118,118,128,0.24)' }}
             accessibilityLabel={t('Notifications', 'الإشعارات')}

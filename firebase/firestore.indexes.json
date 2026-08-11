@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "levels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "skillId", "order": "ASCENDING" },
+        { "fieldPath": "idx", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "drills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "levelId", "order": "ASCENDING" },
+        { "fieldPath": "idx", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

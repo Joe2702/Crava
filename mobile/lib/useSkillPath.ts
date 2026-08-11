@@ -1,77 +1,77 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from './supabase'
-import type { Tables } from './database.types'
+import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { db } from './firebase'
+import { useAuth } from './auth'
+import type { Level, Skill, UserDoc } from './types'
 
-export interface LevelWithState {
-  id: string
-  idx: number
-  name_en: string
-  name_ar: string
-  video_id: string | null
+export interface LevelWithState extends Level {
   state: 'done' | 'current' | 'locked'
 }
 
 export interface SkillPath {
-  skill: Tables<'skills'>
+  skill: Skill
   levels: LevelWithState[]
-  stats: Tables<'user_stats'>
-  profile: Tables<'profiles'>
+  user: UserDoc
 }
 
-// Levels unlock strictly in order: everything up to the highest completed level
-// is done, the next one is current, the rest are locked.
-function deriveStates(
-  levels: Tables<'levels'>[],
-  completedIds: Set<string>,
-): LevelWithState[] {
+// Levels unlock strictly in order: everything up to the first incomplete level
+// is done, that one is current, the rest are locked.
+function deriveStates(levels: Level[], completed: Set<string>): LevelWithState[] {
   const sorted = [...levels].sort((a, b) => a.idx - b.idx)
-  const firstIncomplete = sorted.findIndex((l) => !completedIds.has(l.id))
+  const firstIncomplete = sorted.findIndex((l) => !completed.has(l.id))
   const currentIdx = firstIncomplete === -1 ? sorted.length : firstIncomplete
   return sorted.map((l, i) => ({
-    id: l.id,
-    idx: l.idx,
-    name_en: l.name_en,
-    name_ar: l.name_ar,
-    video_id: l.video_id,
+    ...l,
     state: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'locked',
   }))
 }
 
 export function useSkillPath(skillId = 'muscleup') {
+  const { user } = useAuth()
   const [data, setData] = useState<SkillPath | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    if (!user) return
     setError(null)
-    const [skillRes, levelRes, completionRes, statsRes, profileRes] = await Promise.all([
-      supabase.from('skills').select('*').eq('id', skillId).single(),
-      supabase.from('levels').select('*').eq('skill_id', skillId).order('idx'),
-      supabase.from('user_level_completions').select('level_id'),
-      supabase.from('user_stats').select('*').single(),
-      supabase.from('profiles').select('*').single(),
-    ])
+    try {
+      const [skillSnap, levelSnap, completionSnap, userSnap] = await Promise.all([
+        getDoc(doc(db, 'skills', skillId)),
+        getDocs(query(collection(db, 'levels'), where('skillId', '==', skillId), orderBy('idx'))),
+        getDocs(collection(db, 'users', user.uid, 'levelCompletions')),
+        getDoc(doc(db, 'users', user.uid)),
+      ])
 
-    const failure =
-      skillRes.error || levelRes.error || completionRes.error || statsRes.error || profileRes.error
-    if (failure) {
-      setError(failure.message)
+      if (!skillSnap.exists()) throw new Error(`Skill "${skillId}" not found — has the seed script been run?`)
+      if (!userSnap.exists()) throw new Error('User document missing')
+
+      const levels = levelSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Level)
+      setData({
+        skill: { id: skillSnap.id, ...skillSnap.data() } as Skill,
+        levels: deriveStates(levels, new Set(completionSnap.docs.map((d) => d.id))),
+        user: userSnap.data() as UserDoc,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setData({
-      skill: skillRes.data,
-      levels: deriveStates(levelRes.data, new Set(completionRes.data.map((c) => c.level_id))),
-      stats: statsRes.data,
-      profile: profileRes.data,
-    })
-    setLoading(false)
-  }, [skillId])
+  }, [skillId, user])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  // XP and streak are written by a Cloud Function, so the client never sees
+  // those updates from its own write — subscribe instead of relying on refetch.
+  useEffect(() => {
+    if (!user) return
+    return onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (!snap.exists()) return
+      setData((prev) => (prev ? { ...prev, user: snap.data() as UserDoc } : prev))
+    })
+  }, [user])
 
   return { data, error, loading, reload: load }
 }

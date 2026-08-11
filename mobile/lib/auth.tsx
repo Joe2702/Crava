@@ -1,59 +1,90 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut as fbSignOut,
+  updateProfile,
+  type User,
+} from '@firebase/auth'
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, functions } from './firebase'
 
 interface AuthValue {
-  session: Session | null
+  user: User | null
   loading: boolean
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  deleteAccount: () => Promise<void>
 }
 
 const AuthCtx = createContext<AuthValue | null>(null)
 
+/**
+ * Firebase Auth has no server-side "on user created" hook that can run before
+ * the client reads its own document, so the user doc is created here right
+ * after sign-up. `merge` keeps this safe to re-run.
+ */
+async function ensureUserDoc(user: User, displayName?: string) {
+  await setDoc(
+    doc(db, 'users', user.uid),
+    {
+      displayName: displayName ?? user.displayName ?? null,
+      locale: 'en',
+      city: null,
+      notifEnabled: true,
+      onboardedAt: null,
+      createdAt: serverTimestamp(),
+      xp: 0,
+      streakCount: 0,
+      lastSessionDate: null,
+      entitlement: null,
+    },
+    { merge: true },
+  )
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    return onAuthStateChanged(auth, (next) => {
+      setUser(next)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next)
-    })
-    return () => sub.subscription.unsubscribe()
   }, [])
 
   const value = useMemo<AuthValue>(
     () => ({
-      session,
+      user,
       loading,
       signUp: async (email, password, displayName) => {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { display_name: displayName } },
-        })
-        if (error) throw error
+        const cred = await createUserWithEmailAndPassword(auth, email, password)
+        if (displayName) await updateProfile(cred.user, { displayName })
+        await ensureUserDoc(cred.user, displayName)
       },
       signIn: async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        const cred = await signInWithEmailAndPassword(auth, email, password)
+        // covers accounts created before this doc shape existed
+        await ensureUserDoc(cred.user)
       },
-      signOut: async () => {
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-      },
-      resetPassword: async (email) => {
-        const { error } = await supabase.auth.resetPasswordForEmail(email)
-        if (error) throw error
+      signOut: () => fbSignOut(auth),
+      resetPassword: (email) => sendPasswordResetEmail(auth, email),
+      deleteAccount: async () => {
+        if (!auth.currentUser) throw new Error('Not signed in')
+        // Deleting client-side would strand the Firestore data, so the function
+        // clears the documents and the auth record together.
+        const call = httpsCallable<{ confirm: boolean }, { deleted: boolean }>(functions, 'deleteAccount')
+        await call({ confirm: true })
+        await fbSignOut(auth)
       },
     }),
-    [session, loading],
+    [user, loading],
   )
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
