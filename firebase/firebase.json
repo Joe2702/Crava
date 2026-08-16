@@ -3,6 +3,7 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "//": "Functions are only needed for signed video playback, which requires the Blaze plan. Progression runs on rules alone.",
   "functions": [
     {
       "source": "functions",

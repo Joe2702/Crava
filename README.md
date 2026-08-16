@@ -21,14 +21,16 @@ loop is proven.
 
 ## Backend
 
-Firebase — Firestore, Auth, and Cloud Functions. See `firebase/README.md` for
-setup and deployment.
+Firebase — Firestore and Auth, running entirely on the **free Spark plan**. No
+Cloud Functions and no billing account. See `firebase/README.md`.
 
-Security rules let a user edit only their own profile fields. Writes touching
-`xp`, `streakCount`, `lastSessionDate` or `entitlement` are rejected, and level
-completions are not client-writable at all — those come only from the
-`completeLevel` Cloud Function, which re-checks server-side that the level is
-published and every required drill is done, and awards nothing on replay.
+XP and streak are not stored; they are derived from level completions. Security
+rules make a completion create-only, require the level to be published and its
+required drills ticked, and force `completedAt` to the server clock — so there
+is no counter to tamper with and no way to backdate a streak.
+
+Signed video playback is the one piece that needs the paid plan, and it is not
+needed until there are videos.
 
 ## Running the mobile app
 

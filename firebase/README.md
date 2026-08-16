@@ -1,26 +1,40 @@
 # Crava — Firebase backend
 
-Firestore for data, Firebase Auth for accounts, and one Cloud Function that owns
-all progress writes.
+Firestore for data and Firebase Auth for accounts. **Everything runs on the free
+Spark plan** — no Cloud Functions and no billing account required.
 
-## Why the function exists
+## How progress stays honest without a server
 
-Security rules let a signed-in user edit only their profile fields
-(`displayName`, `locale`, `city`, `notifEnabled`, `onboardedAt`). Writes that
-touch `xp`, `streakCount`, `lastSessionDate` or `entitlement` are rejected, and
-`levelCompletions` is not client-writable at all.
+XP and streak are **not stored**. They are computed from `levelCompletions`.
 
-That means XP and streaks can only come from `completeLevel`, which runs with
-Admin privileges and re-checks everything server-side:
+A stored counter would have to be client-writable on the free tier, which means
+it could be set to any value. A completion cannot be forged the same way,
+because security rules make creating one conditional:
 
-- the level exists and is published
-- every required drill is already ticked
-- replaying a finished level awards nothing
+- create-only — no update, no delete, so a level is awarded exactly once
+- the level must exist and be published
+- the level's three required drills must already be ticked
+- `completedAt` must equal `request.time`, the server's clock, so completions
+  cannot be backdated to manufacture a streak
 
-It runs in a transaction, so two fast taps can't double-award.
+XP is then `completions × 120` and the streak is derived from the completion
+dates. There is no number left to tamper with.
 
-Ticking a drill *is* client-writable, because on its own it grants nothing — the
-function re-reads completions before awarding.
+Ticking a drill *is* client-writable, since on its own it grants nothing — it is
+only an input to the rule above. Note this was equally true of the Cloud
+Function version: it also trusted client-written drill ticks.
+
+The one real weakening versus a server: the rules check drill ids directly
+(`<levelId>-0`, `-1`, `-2`), so they are coupled to the seed's id scheme. Change
+the ids or which drills are required, and `firestore.rules` must change too.
+
+## Cloud Functions (optional, needs Blaze)
+
+`functions/` holds `getPlaybackUrl`, which signs video URLs. It is **not needed
+until you have videos**, and it requires the Blaze plan. Deploy it with
+`./setup.sh --with-functions` once you upgrade. `completeLevel` and
+`deleteAccount` in there are superseded by the rules above and by client-side
+deletion — they are kept only for reference.
 
 ## Data model
 
@@ -28,9 +42,10 @@ function re-reads completions before awarding.
 skills/{skillId}                     content, read-only to clients
 levels/{levelId}                     { skillId, idx, ... }
 drills/{drillId}                     { levelId, idx, isRequired, ... }
-users/{uid}                          profile + xp + streak + entitlement
-users/{uid}/drillCompletions/{id}    client-writable
-users/{uid}/levelCompletions/{id}    function-only
+levelVideos/{levelId}                playback ids, unreadable by any client
+users/{uid}                          profile + entitlement (no stored progress)
+users/{uid}/drillCompletions/{id}    client-writable; grants nothing alone
+users/{uid}/levelCompletions/{id}    create-only, gated by the rules above
 ```
 
 Bilingual content is stored as `name_en` / `name_ar` pairs on the same document,
@@ -42,11 +57,10 @@ and the client picks the column matching the active locale.
 2. **Authentication → Sign-in method → Email/Password → Enable.**
 3. **Firestore Database → Create database → Production mode**, location
    `eur3` or `europe-west1`.
-4. **Upgrade to the Blaze plan.** Cloud Functions require it. Blaze still
-   includes a free monthly allowance (2M invocations) that this app will not
-   come close to, but a billing account must exist.
-5. Project settings → General → Your apps → **Add app → Web**. Copy the config
+4. Project settings → General → Your apps → **Add app → Web**. Copy the config
    values into `mobile/.env` (see `mobile/.env.example`).
+
+No billing account or plan upgrade is needed.
 
 ## Deploy
 
@@ -55,9 +69,7 @@ cd firebase
 npm install -g firebase-tools
 firebase login
 firebase use --add            # select the project
-
-cd functions && npm install && cd ..
-firebase deploy --only firestore:rules,firestore:indexes,functions
+./setup.sh
 ```
 
 ## Seed the content
@@ -111,6 +123,12 @@ GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json \
 ```
 
 ### How access is enforced
+
+**This part needs the Blaze plan**, because signing has to happen somewhere the
+key is secret. Until then lessons show "Video not uploaded yet". The alternative
+if you want to stay free is a Cloudflare Worker doing the signing instead —
+Workers have a generous free tier and you will already have a Cloudflare account
+for Stream.
 
 `getPlaybackUrl` mints a signed HLS URL that expires after two hours. The
 playback id lives in `levelVideos/`, which **no client can read** — Firestore

@@ -41,9 +41,8 @@ export default function Home() {
     )
   }
 
-  const { skill, levels, user } = data
-  const cleared = levels.filter((l) => l.state === 'done').length
-  const xpPct = Math.min(100, Math.round((user.xp / XP_MAX) * 100))
+  const { skill, levels, user, xp, streak, cleared } = data
+  const xpPct = Math.min(100, Math.round((xp / XP_MAX) * 100))
 
   return (
     <ScrollView
@@ -93,7 +92,7 @@ export default function Home() {
             paddingVertical: 8,
           }}
         >
-          <Txt style={{ fontSize: 17, fontWeight: '700', color: colors.accentDark }}>{n(user.streakCount)}</Txt>
+          <Txt style={{ fontSize: 17, fontWeight: '700', color: colors.accentDark }}>{n(streak)}</Txt>
           <Txt style={{ fontSize: 12, fontWeight: '600', color: colors.accentDark }}>
             {t('day streak', 'يوم متتالي')}
           </Txt>
@@ -104,7 +103,7 @@ export default function Home() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Txt style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{t('Progress', 'التقدم')}</Txt>
           <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
-            {n(user.xp)} / {n(XP_MAX)} XP
+            {n(xp)} / {n(XP_MAX)} XP
           </Txt>
         </View>
         <View style={{ height: 12, borderRadius: radius.pill, backgroundColor: colors.fill, overflow: 'hidden' }}>

@@ -1,7 +1,13 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // the progress tests import a .ts path directly and run under
+    // `node --experimental-strip-types`, which needs no build step
+    "allowImportingTsExtensions": true,
+    // Expo's base leaves `types` unset, which in this setup does not pull in
+    // @types/node, so node:test and node:assert go unresolved in the tests
+    "types": ["node", "react"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "types/**/*.d.ts"]
 }

@@ -3,11 +3,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-nat
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
 import { Txt } from '../../../components/Txt'
-import { db, functions } from '../../../lib/firebase'
+import { db } from '../../../lib/firebase'
 import { useAuth } from '../../../lib/auth'
-import type { CompleteLevelResult, Drill, Level } from '../../../lib/types'
+import type { Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { PrimaryButton } from '../../../components/ui'
 import { LessonVideo } from '../../../components/LessonVideo'
@@ -79,22 +78,31 @@ export default function LevelScreen() {
   }
 
   const complete = async () => {
+    if (!user) return
     setSaving(true)
     try {
-      const call = httpsCallable<{ levelId: string }, CompleteLevelResult>(functions, 'completeLevel')
-      const { data } = await call({ levelId: id })
+      // Create-only under the rules, so a second attempt is rejected rather
+      // than re-awarding. serverTimestamp() is required — the rules compare it
+      // to request.time so completion dates cannot be backdated.
+      await setDoc(doc(db, 'users', user.uid, 'levelCompletions', id), {
+        completedAt: serverTimestamp(),
+      })
       Alert.alert(
-        data.alreadyCompleted ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
-        data.alreadyCompleted
-          ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
-          : t(
-              `+120 XP · ${data.streakCount} day streak`,
-              `+١٢٠ نقطة · ${n(data.streakCount)} يوم متتالي`,
-            ),
+        t('Level cleared', 'تم إنهاء المستوى'),
+        t('+120 XP', '+١٢٠ نقطة'),
         [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
       )
     } catch (e) {
-      Alert.alert(t('Could not complete level', 'تعذر إنهاء المستوى'), e instanceof Error ? e.message : '')
+      const already = (e as { code?: string }).code === 'permission-denied'
+      Alert.alert(
+        already ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Could not complete level', 'تعذر إنهاء المستوى'),
+        already
+          ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
+          : e instanceof Error
+            ? e.message
+            : '',
+        [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
+      )
     } finally {
       setSaving(false)
     }

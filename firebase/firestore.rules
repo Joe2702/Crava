@@ -11,6 +11,21 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function levelIsPublished(levelId) {
+      return exists(/databases/$(database)/documents/levels/$(levelId))
+             && get(/databases/$(database)/documents/levels/$(levelId)).data.isPublished == true;
+    }
+
+    // Required drills are always idx 0-2 and the seed gives every drill the id
+    // "<levelId>-<idx>", so their completion can be checked directly. Rules
+    // cannot loop, so this is deliberately coupled to that id scheme — if the
+    // seed's ids or the required set change, this must change with them.
+    function requiredDrillsDone(uid, levelId) {
+      return exists(/databases/$(database)/documents/users/$(uid)/drillCompletions/$(levelId + '-0'))
+             && exists(/databases/$(database)/documents/users/$(uid)/drillCompletions/$(levelId + '-1'))
+             && exists(/databases/$(database)/documents/users/$(uid)/drillCompletions/$(levelId + '-2'));
+    }
+
     // ---- content: readable when published, never client-writable ----
 
     match /skills/{skillId} {
@@ -30,7 +45,6 @@ service cloud.firestore {
 
     // Playback ids. Unreadable by any client — Firestore rules cannot hide a
     // single field, so the ids live apart from levels/ rather than on it.
-    // getPlaybackUrl reads this with Admin privileges.
     match /levelVideos/{levelId} {
       allow read, write: if false;
     }
@@ -40,34 +54,33 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid);
 
-      // Progress and entitlement are awarded server-side. The client may only
-      // create its own doc at zero, and may only ever edit the profile fields
-      // below — any write touching xp, streakCount, lastSessionDate or
-      // entitlement is rejected, so progress cannot be minted from a phone.
-      // The Cloud Function uses the Admin SDK, which bypasses these rules.
-      allow create: if isOwner(uid)
-                    && request.resource.data.xp == 0
-                    && request.resource.data.streakCount == 0
-                    && request.resource.data.entitlement == null;
-
+      // XP and streak are NOT stored. They are derived from levelCompletions,
+      // so there is no counter to tamper with — the only thing a client can
+      // write here is its own profile.
+      allow create: if isOwner(uid);
       allow update: if isOwner(uid)
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['displayName', 'locale', 'city', 'notifEnabled', 'onboardedAt']);
+      allow delete: if isOwner(uid);
 
-      allow delete: if false;
-
-      // Ticking a drill is harmless on its own — it grants nothing. The
-      // function re-checks these server-side before awarding anything.
+      // Ticking a drill grants nothing by itself; it is only an input to the
+      // level-completion check below.
       match /drillCompletions/{drillId} {
         allow read, create, delete: if isOwner(uid);
         allow update: if false;
       }
 
-      // Level completions are the record of what was earned, so only the
-      // function may write them.
+      // The earning event. Create-only, so a level can be cleared exactly once
+      // and never re-awarded. completedAt must be the server's clock, which
+      // stops a client backdating completions to manufacture a streak.
       match /levelCompletions/{levelId} {
         allow read: if isOwner(uid);
-        allow write: if false;
+        allow create: if isOwner(uid)
+                      && levelIsPublished(levelId)
+                      && requiredDrillsDone(uid, levelId)
+                      && request.resource.data.keys().hasOnly(['completedAt'])
+                      && request.resource.data.completedAt == request.time;
+        allow update, delete: if false;
       }
     }
 

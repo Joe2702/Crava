@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Deploys rules, indexes and functions, then seeds the content.
+# Deploys rules and indexes, then seeds the content.
 #
 # Run the console steps in README.md first (create project, enable
-# Email/Password auth, create Firestore, upgrade to Blaze). Those cannot be
-# scripted without extra API access.
+# Email/Password auth, create Firestore). Those cannot be scripted without
+# extra API access.
+#
+# Cloud Functions are NOT deployed — the app runs entirely on the free Spark
+# plan. Pass --with-functions once the project is on Blaze.
 #
 #   cd firebase && ./setup.sh
 set -euo pipefail
@@ -20,16 +23,20 @@ if [ ! -f .firebaserc ]; then
   exit 1
 fi
 
-echo "==> Installing function dependencies"
-npm --prefix functions install
-
-echo "==> Deploying rules, indexes and functions"
-firebase deploy --only firestore:rules,firestore:indexes,functions
+if [ "${1:-}" = "--with-functions" ]; then
+  echo "==> Installing function dependencies"
+  npm --prefix functions install
+  echo "==> Deploying rules, indexes and functions"
+  firebase deploy --only firestore:rules,firestore:indexes,functions
+else
+  echo "==> Deploying rules and indexes (no functions — free plan)"
+  firebase deploy --only firestore:rules,firestore:indexes
+fi
 
 if [ ! -f seed/serviceAccount.json ]; then
   cat <<'MSG'
 
-Rules and functions are deployed.
+Rules are deployed.
 
 To seed the lesson content, download a service account key:
   Firebase console -> Project settings -> Service accounts -> Generate new private key

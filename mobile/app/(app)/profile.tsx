@@ -29,8 +29,7 @@ export default function Profile() {
     )
   }
 
-  const { user, levels } = data
-  const cleared = levels.filter((l) => l.state === 'done').length
+  const { user, xp, streak, cleared } = data
 
   const toggleNotif = async (value: boolean) => {
     if (!authUser) return
@@ -93,8 +92,8 @@ export default function Profile() {
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {stat(n(cleared), t('Levels', 'مستويات'))}
-        {stat(n(user.streakCount), t('Day streak', 'يوم متتالي'))}
-        {stat(n(user.xp), 'XP')}
+        {stat(n(streak), t('Day streak', 'يوم متتالي'))}
+        {stat(n(xp), 'XP')}
       </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>

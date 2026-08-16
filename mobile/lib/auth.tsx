@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -8,9 +9,8 @@ import {
   updateProfile,
   type User,
 } from '@firebase/auth'
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
-import { auth, db, functions } from './firebase'
+import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
+import { auth, db } from './firebase'
 
 interface AuthValue {
   user: User | null
@@ -39,13 +39,22 @@ async function ensureUserDoc(user: User, displayName?: string) {
       notifEnabled: true,
       onboardedAt: null,
       createdAt: serverTimestamp(),
-      xp: 0,
-      streakCount: 0,
-      lastSessionDate: null,
       entitlement: null,
     },
     { merge: true },
   )
+}
+
+/**
+ * Deleting a document does not delete its subcollections, so progress would
+ * outlive the account without this.
+ */
+async function deleteOwnData(uid: string) {
+  for (const sub of ['drillCompletions', 'levelCompletions']) {
+    const snap = await getDocs(collection(db, 'users', uid, sub))
+    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)))
+  }
+  await deleteDoc(doc(db, 'users', uid))
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -76,12 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: () => fbSignOut(auth),
       resetPassword: (email) => sendPasswordResetEmail(auth, email),
       deleteAccount: async () => {
-        if (!auth.currentUser) throw new Error('Not signed in')
-        // Deleting client-side would strand the Firestore data, so the function
-        // clears the documents and the auth record together.
-        const call = httpsCallable<{ confirm: boolean }, { deleted: boolean }>(functions, 'deleteAccount')
-        await call({ confirm: true })
-        await fbSignOut(auth)
+        const current = auth.currentUser
+        if (!current) throw new Error('Not signed in')
+        // Firestore first: once the auth record is gone the rules no longer
+        // recognise the owner, and the documents could not be removed.
+        await deleteOwnData(current.uid)
+        await deleteUser(current)
       },
     }),
     [user, loading],

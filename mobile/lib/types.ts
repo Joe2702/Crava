@@ -35,9 +35,9 @@ export interface Drill {
 }
 
 /**
- * One document per user. `xp`, `streakCount` and `lastSessionDate` are written
- * only by the completeLevel Cloud Function — security rules reject client
- * writes to them.
+ * One document per user — profile only. XP and streak are derived from
+ * levelCompletions rather than stored, so there is no counter a client could
+ * tamper with.
  */
 export interface UserDoc {
   displayName: string | null
@@ -46,19 +46,10 @@ export interface UserDoc {
   notifEnabled: boolean
   onboardedAt: number | null
   createdAt: number
-  xp: number
-  streakCount: number
-  lastSessionDate: string | null
   entitlement: {
     productId: string
     status: 'active' | 'trialing' | 'expired' | 'cancelled' | 'grace'
     source: 'ios' | 'android' | 'web' | 'promo'
     expiresAt: number | null
   } | null
-}
-
-export interface CompleteLevelResult {
-  xp: number
-  streakCount: number
-  alreadyCompleted: boolean
 }
