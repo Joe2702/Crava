@@ -54,7 +54,8 @@ Entirely in GitHub Actions — nothing to install, no accounts, no secrets.
 
 **Actions** tab → **Build APK** → **Run workflow** → pick a backend → **Run**.
 
-When it finishes (~10-15 min), the run page has an **Artifacts** section at the
+When it finishes (~20-30 min on a cold cache, faster after), the run page has an
+**Artifacts** section at the
 bottom. Download it, unzip, and open the `.apk` on an Android phone. Android
 warns about installing outside the Play Store; allow it.
 
@@ -67,6 +68,12 @@ The two backend options:
   (Settings → Secrets and variables → Actions), taken from the Firebase web app
   config: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`,
   `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`.
+
+The APK is built for **arm64-v8a only**. New Architecture compiles React
+Native's C++ from source once per CPU architecture, and building all four does
+not finish in reasonable time on a GitHub runner. Every Android phone worth
+targeting is arm64. Tick **all_architectures** if you need to run it on an x86
+emulator — expect roughly four times the build time.
 
 The APK is signed with the debug keystore Expo generates, which is what makes a
 zero-secret build possible. That is fine for testing and for sending to people

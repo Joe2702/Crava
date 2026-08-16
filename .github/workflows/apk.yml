@@ -13,6 +13,10 @@ on:
         options:
           - demo      # in-memory, no Firebase needed
           - firebase  # uses the FIREBASE_* repository secrets
+      all_architectures:
+        description: Build for every CPU architecture (needed only for x86 emulators; ~4x slower)
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -20,7 +24,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -87,11 +91,21 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
+      # New Architecture compiles React Native's C++ from source, once per CPU
+      # architecture. Prebuild defaults to all four, which does not finish in a
+      # sensible time on a 2-core runner. Every Android phone worth targeting is
+      # arm64-v8a; the others are only needed for x86 emulators.
       - name: Build release APK
         working-directory: mobile/android
+        env:
+          ARCHS: ${{ inputs.all_architectures && 'armeabi-v7a,arm64-v8a,x86,x86_64' || 'arm64-v8a' }}
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+          # the runner has far more memory than prebuild's conservative default
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' >> gradle.properties
+          ./gradlew assembleRelease \
+            -PreactNativeArchitectures="$ARCHS" \
+            --no-daemon
 
       - name: Name the artifact
         id: name
@@ -110,6 +124,8 @@ jobs:
             echo "## APK ready"
             echo
             echo "Backend: **${{ inputs.backend }}**"
+            echo
+            echo "Architectures: \`${{ inputs.all_architectures && 'all four' || 'arm64-v8a only' }}\`"
             echo
             echo "Download **${{ steps.name.outputs.tag }}** from the Artifacts section of this run,"
             echo "unzip it, and open the .apk on an Android phone."
