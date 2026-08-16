@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSkillPath } from '../../../lib/useSkillPath'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { LanguageToggle } from '../../../components/LanguageToggle'
+import { IconBell } from '../../../components/Icons'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 import { TAB_BAR_CLEARANCE } from '../../../components/TabBar'
 
@@ -55,10 +56,11 @@ export default function Home() {
         <Txt style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>Crava</Txt>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <LanguageToggle />
+          {/* Profile is a tab now, so this slot goes to the feed instead. */}
           <Pressable
-            onPress={() => router.push('/profile')}
+            onPress={() => router.push('/community')}
             accessibilityRole="button"
-            accessibilityLabel={t('Profile', 'حسابي')}
+            accessibilityLabel={t('Milestones', 'الإنجازات')}
             style={{
               width: 32,
               height: 32,
@@ -68,7 +70,7 @@ export default function Home() {
               justifyContent: 'center',
             }}
           >
-            <Txt style={{ fontSize: 15 }}>☰</Txt>
+            <IconBell size={16} color={colors.text} />
           </Pressable>
         </View>
       </View>
