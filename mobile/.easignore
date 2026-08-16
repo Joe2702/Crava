@@ -1,0 +1,25 @@
+# EAS falls back to .gitignore when this file is absent, which would exclude
+# .env and produce a build with no Firebase config — the app would then throw on
+# launch. This file replaces .gitignore for EAS uploads and deliberately keeps
+# .env, whose EXPO_PUBLIC_* values are compiled into the bundle anyway and are
+# not secrets.
+node_modules/
+.expo/
+dist/
+web-build/
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
+*.tsbuildinfo
+/ios
+/android
