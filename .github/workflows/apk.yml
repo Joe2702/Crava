@@ -101,12 +101,17 @@ jobs:
           ARCHS: ${{ inputs.all_architectures && 'armeabi-v7a,arm64-v8a,x86,x86_64' || 'arm64-v8a' }}
         run: |
           chmod +x ./gradlew
-          # the runner has far more memory than prebuild's conservative default
-          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' >> gradle.properties
-          # --stacktrace: several Gradle plugins shell out to node during
-          # configuration, and the bare failure ("Process 'command 'node''
-          # finished with non-zero exit value 1") names neither the plugin nor
-          # the command. The stack trace does.
+          # The runner has far more memory than prebuild's conservative default.
+          # The leading \n matters: prebuild writes gradle.properties with no
+          # trailing newline, so a plain `echo >>` lands on the end of the last
+          # line instead of a new one. That line is
+          # expo.inlineModules.watchedDirectories=[], which the Expo autolinking
+          # plugin passes to node as JSON — appending to it made the build die
+          # with an unattributed "Process 'command 'node'' finished with
+          # non-zero exit value 1".
+          printf '\norg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g\n' >> gradle.properties
+          echo "--- tail of gradle.properties ---"
+          tail -3 gradle.properties
           ./gradlew assembleRelease \
             -PreactNativeArchitectures="$ARCHS" \
             --no-daemon \
