@@ -8,6 +8,9 @@ import { db, isDemo } from '../../../lib/firebase'
 import { demo, DEMO_DRILLS, DEMO_LEVELS } from '../../../lib/demo'
 import { useAuth } from '../../../lib/auth'
 import { useProfile } from '../../../lib/profile'
+import { useSkillPath } from '../../../lib/useSkillPath'
+import { XP_PER_LEVEL } from '../../../lib/progress'
+import { LevelUpSheet, type LevelUpInfo } from '../../../components/LevelUpSheet'
 import { canOpenLevel } from '../../../lib/entitlement'
 import type { Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
@@ -29,6 +32,8 @@ export default function LevelScreen() {
   const [done, setDone] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [levelUp, setLevelUp] = useState<LevelUpInfo | null>(null)
+  const path = useSkillPath()
 
   const n = (v: number) => localizeNumber(v, locale)
 
@@ -96,18 +101,39 @@ export default function LevelScreen() {
     }
   }
 
+  /**
+   * Only figures that are known here without re-deriving anything: the XP for a
+   * level is a constant, and the count is what the path already showed plus the
+   * one just cleared. The path itself is reloaded so every other screen picks
+   * up the real numbers from the single place that computes them.
+   */
+  const celebrate = () => {
+    const idx = level?.idx ?? 0
+    setLevelUp({
+      levelIdx: idx,
+      xpGained: XP_PER_LEVEL,
+      cleared: (path.data?.cleared ?? 0) + 1,
+      nextLevelName: path.data?.levels.find((l) => l.idx === idx + 1)
+        ? field(path.data.levels.find((l) => l.idx === idx + 1)!, 'name')
+        : null,
+    })
+    path.reload()
+  }
+
   const complete = async () => {
     if (!user) return
 
     if (isDemo) {
       const { alreadyCompleted } = demo.completeLevel(id)
-      Alert.alert(
-        alreadyCompleted ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
-        alreadyCompleted
-          ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
-          : t('+120 XP', '+١٢٠ نقطة'),
-        [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
-      )
+      if (alreadyCompleted) {
+        Alert.alert(
+          t('Already cleared', 'تم إنهاؤه سابقاً'),
+          t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.'),
+          [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
+        )
+        return
+      }
+      celebrate()
       return
     }
 
@@ -119,11 +145,7 @@ export default function LevelScreen() {
       await setDoc(doc(db(), 'users', user.uid, 'levelCompletions', id), {
         completedAt: serverTimestamp(),
       })
-      Alert.alert(
-        t('Level cleared', 'تم إنهاء المستوى'),
-        t('+120 XP', '+١٢٠ نقطة'),
-        [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
-      )
+      celebrate()
     } catch (e) {
       const already = (e as { code?: string }).code === 'permission-denied'
       Alert.alert(
@@ -159,6 +181,14 @@ export default function LevelScreen() {
   const requiredDone = drills.filter((d) => d.isRequired).every((d) => done.has(d.id))
 
   return (
+    <>
+    <LevelUpSheet
+      info={levelUp}
+      onClose={() => {
+        setLevelUp(null)
+        router.back()
+      }}
+    />
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32, gap: 18 }}
@@ -245,6 +275,7 @@ export default function LevelScreen() {
         busy={saving}
       />
     </ScrollView>
+    </>
   )
 }
 
