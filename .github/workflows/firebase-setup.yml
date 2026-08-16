@@ -64,15 +64,30 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      # The CLI checks that the Firestore API is enabled before deploying, which
+      # needs serviceusage read access. The default firebase-adminsdk account
+      # does not have it, so that 403 is the usual first-run failure — caught
+      # here and explained rather than left as a raw error.
       - name: Deploy rules and indexes
         working-directory: firebase
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.creds.outputs.path }}
         run: |
-          firebase deploy \
+          set +e
+          out=$(firebase deploy \
             --only firestore:rules,firestore:indexes \
             --project "${{ steps.creds.outputs.project }}" \
-            --non-interactive
+            --non-interactive 2>&1)
+          code=$?
+          echo "$out"
+          if [ $code -ne 0 ]; then
+            if echo "$out" | grep -qi 'serviceusage\|Permission denied to get service'; then
+              echo "::error::The service account cannot read the project's enabled APIs. Grant it the 'Service Usage Consumer' role at https://console.cloud.google.com/iam-admin/iam?project=${{ steps.creds.outputs.project }} then re-run."
+            elif echo "$out" | grep -qi 'does not exist\|NOT_FOUND'; then
+              echo "::error::Firestore does not exist yet in this project. Create it in the Firebase console (Firestore Database -> Create database, Production mode) then re-run."
+            fi
+            exit $code
+          fi
 
       - name: Seed lesson content
         if: inputs.seed

@@ -72,6 +72,12 @@ Actions tab. It deploys rules and indexes and seeds the content.
 Unlike the web config, that JSON *is* a real secret — it grants full admin
 access to the project. Never commit it.
 
+The service account also needs the **Service Usage Consumer** role, which the
+default `firebase-adminsdk` account does not have. Without it the deploy fails
+with `403, Permission denied to get service [firestore.googleapis.com]`, because
+the CLI checks the Firestore API is enabled before deploying. Add it under
+IAM → the account's row → ✏️ → Add another role.
+
 **Locally**, if you prefer:
 
 ```bash
