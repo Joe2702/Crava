@@ -44,7 +44,8 @@ Runs in demo mode against an in-memory store when `mobile/.env` is absent, so
 no backend setup is needed to try it. Copy `.env.example` to `.env` and fill it
 in from the Firebase console to switch to the real backend.
 
-To get an installable APK, see `mobile/README.md`.
+For an installable APK, run the **Build APK** workflow from the Actions tab —
+no local setup or accounts needed. Details in `mobile/README.md`.
 
 ## Running the web app
 

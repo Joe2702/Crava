@@ -50,27 +50,31 @@ yet" — no lessons have been filmed.
 
 ## Build an installable APK
 
-The build runs on Expo's servers, so no Android SDK is needed locally.
+Entirely in GitHub Actions — nothing to install, no accounts, no secrets.
 
-```bash
-cd mobile
-npm install -g eas-cli
-eas login          # free Expo account
-eas init           # links the project, writes extra.eas.projectId into app.json
-eas build --platform android --profile preview
-```
+**Actions** tab → **Build APK** → **Run workflow** → pick a backend → **Run**.
 
-The `preview` profile is configured to emit an **APK** (not an AAB), which is
-what installs directly on a phone. When the build finishes, EAS prints a
-download URL and also shows a QR code — open it on the phone and install.
-Android will warn about installing outside the Play Store; allow it.
+When it finishes (~10-15 min), the run page has an **Artifacts** section at the
+bottom. Download it, unzip, and open the `.apk` on an Android phone. Android
+warns about installing outside the Play Store; allow it.
 
-No Google Play account is needed for this. `production` emits an AAB instead,
-which is only for Play Store submission.
+The two backend options:
 
-There is also a **Build Android APK** GitHub Action (manual trigger) that does
-the same thing from CI. It needs an `EXPO_TOKEN` repository secret, generated
-at <https://expo.dev/settings/access-tokens>.
+- **demo** — no Firebase needed. Sign in with anything; progress is in memory.
+  Use this to hand the app to someone today.
+- **firebase** — talks to the real backend. Needs these repository secrets
+  (Settings → Secrets and variables → Actions), taken from the Firebase web app
+  config: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`,
+  `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`.
+
+The APK is signed with the debug keystore Expo generates, which is what makes a
+zero-secret build possible. That is fine for testing and for sending to people
+directly, but a real Play Store release needs your own keystore — otherwise you
+cannot ship updates that install over it.
+
+`eas build --platform android --profile preview` still works if you prefer
+Expo's cloud builder; `eas.json` is configured for it. It needs a free Expo
+account, and it is the route you will want for iOS/TestFlight later.
 
 ## Environment
 
