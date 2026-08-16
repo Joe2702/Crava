@@ -81,8 +81,8 @@ jobs:
           code=$?
           echo "$out"
           if [ $code -ne 0 ]; then
-            if echo "$out" | grep -qi 'serviceusage\|Permission denied to get service'; then
-              echo "::error::The service account cannot read the project's enabled APIs. Grant it the 'Service Usage Consumer' role at https://console.cloud.google.com/iam-admin/iam?project=${{ steps.creds.outputs.project }} then re-run."
+            if echo "$out" | grep -qi 'serviceusage\|Permission denied to get service\|firebaserules\|caller does not have permission'; then
+              echo "::error::The service account is missing a role. Grant it 'Firebase Admin' AND 'Service Usage Consumer' at https://console.cloud.google.com/iam-admin/iam?project=${{ steps.creds.outputs.project }} then run the workflow again. The default firebase-adminsdk account has neither, and deploying rules and indexes needs both."
             elif echo "$out" | grep -qi 'does not exist\|NOT_FOUND'; then
               echo "::error::Firestore does not exist yet in this project. Create it in the Firebase console (Firestore Database -> Create database, Production mode) then re-run."
             fi
