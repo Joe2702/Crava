@@ -16,7 +16,9 @@ export interface Level {
   idx: number
   name_en: string
   name_ar: string
-  videoId: string | null
+  /** Whether a video exists. The playback id itself lives in levelVideos,
+   *  which no client can read; the URL is minted by getPlaybackUrl. */
+  hasVideo: boolean
   durationS: number | null
   isPublished: boolean
 }

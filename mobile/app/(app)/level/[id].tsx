@@ -10,6 +10,7 @@ import { useAuth } from '../../../lib/auth'
 import type { CompleteLevelResult, Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { PrimaryButton } from '../../../components/ui'
+import { LessonVideo } from '../../../components/LessonVideo'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function LevelScreen() {
@@ -120,20 +121,7 @@ export default function LevelScreen() {
         </View>
       </Pressable>
 
-      <View
-        style={{
-          height: 200,
-          borderRadius: radius.xxl,
-          backgroundColor: '#232326',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 24,
-        }}
-      >
-        <Txt style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, textAlign: 'center' }}>
-          {level?.videoId ? t('Video ready', 'الفيديو جاهز') : t('Video not uploaded yet', 'لم يتم رفع الفيديو بعد')}
-        </Txt>
-      </View>
+      <LessonVideo levelId={id} hasVideo={level?.hasVideo === true} />
 
       <View>
         <Txt style={{ fontSize: 28, fontWeight: '700', letterSpacing: -0.8, color: colors.text }}>

@@ -63,7 +63,7 @@ for (const [i, [nameEn, nameAr]] of LEVELS.entries()) {
     idx,
     name_en: nameEn,
     name_ar: nameAr,
-    videoId: null,
+    hasVideo: false,
     durationS: null,
     isPublished: true,
   })

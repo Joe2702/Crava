@@ -2,7 +2,9 @@
   "name": "crava-functions",
   "private": true,
   "main": "lib/index.js",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
@@ -10,8 +12,10 @@
     "logs": "firebase functions:log"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "firebase-admin": "^13.0.2",
-    "firebase-functions": "^6.3.0"
+    "firebase-functions": "^6.3.0",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

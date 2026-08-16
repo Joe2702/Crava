@@ -28,6 +28,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Playback ids. Unreadable by any client — Firestore rules cannot hide a
+    // single field, so the ids live apart from levels/ rather than on it.
+    // getPlaybackUrl reads this with Admin privileges.
+    match /levelVideos/{levelId} {
+      allow read, write: if false;
+    }
+
     // ---- per-user data ----
 
     match /users/{uid} {

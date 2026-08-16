@@ -74,3 +74,50 @@ GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json npm run seed
 
 Writes 1 skill, 6 levels and 24 drills. Safe to re-run — ids are deterministic,
 so it updates in place rather than duplicating.
+
+## Video
+
+Videos are **streamed from Cloudflare Stream**, not bundled into the app. Six
+4-minute lessons is roughly 500 MB–1 GB; Play caps an APK base around 150 MB and
+iOS warns past 200 MB, so bundling is not an option — this is also how Udemy,
+Coursera and MasterClass work. Stream transcodes to HLS with several bitrates,
+which matters on Egyptian mobile connections: a single fixed-bitrate MP4 stalls
+where adaptive playback drops a rung and keeps going.
+
+### Setup
+
+1. Cloudflare dashboard → **Stream** → upload a lesson.
+2. On the video, turn on **Require signed URLs**. Without this the video is
+   publicly playable by anyone with the id.
+3. **Stream → Settings → Signing keys → Create**. Keep the key ID and the PEM.
+4. Configure the function:
+
+```bash
+# PEM is base64-encoded so newlines survive being pasted
+base64 -w0 signing-key.pem | firebase functions:secrets:set STREAM_SIGNING_KEY_PEM
+
+firebase functions:config:set    # not needed; the two below are params
+# set these when prompted on deploy, or add to .env for functions:
+#   STREAM_SIGNING_KEY_ID=<key id>
+#   STREAM_CUSTOMER_CODE=<from your Stream embed URL>
+```
+
+5. Attach the uploaded video to a level:
+
+```bash
+cd firebase/seed
+GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json \
+  node attach-video.mjs muscleup-1 <stream-video-uid> 252
+```
+
+### How access is enforced
+
+`getPlaybackUrl` mints a signed HLS URL that expires after two hours. The
+playback id lives in `levelVideos/`, which **no client can read** — Firestore
+rules cannot hide a single field, so it is kept out of the level document
+entirely. Level 1 streams free; levels 2–6 require an active entitlement, which
+is checked in the function rather than the app, because a client-side check is
+only a suggestion.
+
+A subscriber can still screen-record, as they can on any platform. Signed
+expiring URLs stop the cheaper attack: lifting a permanent link and sharing it.
