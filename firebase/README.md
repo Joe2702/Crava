@@ -64,6 +64,16 @@ No billing account or plan upgrade is needed.
 
 ## Deploy
 
+**From GitHub, no terminal:** add a `FIREBASE_SERVICE_ACCOUNT` repository
+secret containing the whole JSON from Project settings → Service accounts →
+Generate new private key, then run the **Deploy Firebase** workflow from the
+Actions tab. It deploys rules and indexes and seeds the content.
+
+Unlike the web config, that JSON *is* a real secret — it grants full admin
+access to the project. Never commit it.
+
+**Locally**, if you prefer:
+
 ```bash
 cd firebase
 npm install -g firebase-tools

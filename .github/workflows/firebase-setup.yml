@@ -1,0 +1,100 @@
+name: Deploy Firebase
+
+# Deploys Firestore rules + indexes and seeds the lesson content, so none of
+# this needs a local terminal.
+#
+# Requires one secret: FIREBASE_SERVICE_ACCOUNT — the whole JSON from
+# Firebase console -> Project settings -> Service accounts -> Generate new
+# private key. Unlike the web config, that file IS a real secret: it grants
+# full admin access to the project.
+#
+# The console steps it cannot do for you: create the project, enable
+# Email/Password sign-in, and create the Firestore database.
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Also write the lesson content
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check secret is present
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT secret. Paste the whole service-account JSON into it."
+            exit 1
+          fi
+
+      # Written outside the workspace so it cannot be picked up by anything
+      # that walks the repo, and removed again at the end of the job.
+      - name: Write credentials
+        id: creds
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          path="$RUNNER_TEMP/sa.json"
+          printf '%s' "$SA" > "$path"
+          chmod 600 "$path"
+          project=$(node -e "process.stdout.write(require('$path').project_id || '')")
+          if [ -z "$project" ]; then
+            echo "::error::Could not read project_id from the service-account JSON — is it the right file?"
+            exit 1
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "Deploying to $project"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy rules and indexes
+        working-directory: firebase
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.creds.outputs.path }}
+        run: |
+          firebase deploy \
+            --only firestore:rules,firestore:indexes \
+            --project "${{ steps.creds.outputs.project }}" \
+            --non-interactive
+
+      - name: Seed lesson content
+        if: inputs.seed
+        working-directory: firebase/seed
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.creds.outputs.path }}
+        run: |
+          npm install --no-audit --no-fund
+          node seed.mjs
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Firebase deployed"
+            echo
+            echo "Project: **${{ steps.creds.outputs.project }}**"
+            echo "- Firestore rules and indexes: deployed"
+            echo "- Lesson content: ${{ inputs.seed && 'seeded (1 skill, 6 levels, 24 drills)' || 'skipped' }}"
+            echo
+            echo "Next: run **Build APK** with backend \`firebase\`."
+          } >> "$GITHUB_STEP_SUMMARY"

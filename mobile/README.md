@@ -62,7 +62,8 @@ The two backend options:
 
 - **demo** — no Firebase needed. Sign in with anything; progress is in memory.
   Use this to hand the app to someone today.
-- **firebase** — talks to the real backend. Needs these repository secrets
+- **firebase** — talks to the real backend. Deploy it first with the **Deploy
+  Firebase** workflow, then set these repository secrets
   (Settings → Secrets and variables → Actions), taken from the Firebase web app
   config: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`,
   `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`.
