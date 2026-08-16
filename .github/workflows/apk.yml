@@ -103,9 +103,14 @@ jobs:
           chmod +x ./gradlew
           # the runner has far more memory than prebuild's conservative default
           echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' >> gradle.properties
+          # --stacktrace: several Gradle plugins shell out to node during
+          # configuration, and the bare failure ("Process 'command 'node''
+          # finished with non-zero exit value 1") names neither the plugin nor
+          # the command. The stack trace does.
           ./gradlew assembleRelease \
             -PreactNativeArchitectures="$ARCHS" \
-            --no-daemon
+            --no-daemon \
+            --stacktrace
 
       # Gradle reporting success is not proof an APK landed where expected, so
       # locate it explicitly and fail with a directory listing rather than the
