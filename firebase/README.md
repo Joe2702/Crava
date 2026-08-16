@@ -28,6 +28,20 @@ The one real weakening versus a server: the rules check drill ids directly
 (`<levelId>-0`, `-1`, `-2`), so they are coupled to the seed's id scheme. Change
 the ids or which drills are required, and `firestore.rules` must change too.
 
+## Rules are not filters
+
+A rule that tests a document field constrains what the *client must ask for*, not
+what Firestore quietly hides. `levels` is readable only when
+`isPublished == true`, so any query over that collection has to include
+`where('isPublished', '==', true)` — otherwise Firestore rejects the whole read
+with `Missing or insufficient permissions`, even when every stored level is
+published. Single-document `getDoc` calls are exempt, because the rule is
+evaluated against the one document being returned.
+
+That means each such rule needs a matching clause in the query *and* a composite
+index covering it. Adding a field test to a collection rule without doing both
+breaks the app at runtime while looking correct in review.
+
 ## Cloud Functions (optional, needs Blaze)
 
 `functions/` holds `getPlaybackUrl`, which signs video URLs. It is **not needed

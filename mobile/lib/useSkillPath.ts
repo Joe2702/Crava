@@ -31,6 +31,18 @@ function deriveStates(levels: Level[], completed: Set<string>): LevelWithState[]
   }))
 }
 
+function blankProfile(displayName: string | null): UserDoc {
+  return {
+    displayName,
+    locale: 'en',
+    city: null,
+    notifEnabled: true,
+    onboardedAt: null,
+    createdAt: Date.now(),
+    entitlement: null,
+  }
+}
+
 function build(skill: Skill, levels: Level[], user: UserDoc, completions: Map<string, Date>): SkillPath {
   const ids = new Set(completions.keys())
   return {
@@ -62,18 +74,35 @@ export function useSkillPath(skillId = 'muscleup') {
     try {
       const [skillSnap, levelSnap, userSnap] = await Promise.all([
         getDoc(doc(db(), 'skills', skillId)),
-        getDocs(query(collection(db(), 'levels'), where('skillId', '==', skillId), orderBy('idx'))),
+        // isPublished is filtered here because the security rule on levels/
+        // tests it. Rules are not filters: for a query, Firestore rejects the
+        // whole read unless the query itself proves every document it could
+        // return satisfies the rule. Without this clause the screen fails with
+        // "Missing or insufficient permissions" even though every level is
+        // published. The single-document reads either side are fine, since a
+        // get is evaluated against the document it actually returns.
+        getDocs(
+          query(
+            collection(db(), 'levels'),
+            where('skillId', '==', skillId),
+            where('isPublished', '==', true),
+            orderBy('idx'),
+          ),
+        ),
         getDoc(doc(db(), 'users', user.uid)),
       ])
 
       if (!skillSnap.exists()) throw new Error(`Skill "${skillId}" not found — has the seed script been run?`)
-      if (!userSnap.exists()) throw new Error('User document missing')
 
       setData(
         build(
           { id: skillSnap.id, ...skillSnap.data() } as Skill,
           levelSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Level),
-          userSnap.data() as UserDoc,
+          // The profile document is written straight after sign-up, but
+          // onAuthStateChanged fires before that write lands, so this screen can
+          // mount first. Nothing here derives from the profile — it is display
+          // data — so a blank one is used rather than failing the whole path.
+          (userSnap.data() as UserDoc | undefined) ?? blankProfile(user.displayName),
           new Map(),
         ),
       )
