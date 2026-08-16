@@ -93,6 +93,36 @@ service cloud.firestore {
       }
     }
 
+    // ---- coaches marketplace ----
+
+    match /coaches/{coachId} {
+      allow read: if signedIn() && resource.data.isPublished == true;
+      allow write: if false;
+
+      match /slots/{slotId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    // A booking is a request, not a confirmation, so two people asking for the
+    // same slot is not a conflict to resolve here — the coach confirms one.
+    // No price is stored: a client-supplied figure could not be trusted, and
+    // the coach's rate is already on the coach document.
+    match /bookings/{bookingId} {
+      allow read: if signedIn() && resource.data.userUid == request.auth.uid;
+      allow create: if signedIn()
+                    && request.resource.data.userUid == request.auth.uid
+                    && request.resource.data.status == 'requested'
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.keys().hasOnly(
+                         ['userUid', 'coachId', 'slotId', 'sessionType', 'status', 'createdAt'])
+                    && request.resource.data.sessionType in ['form', 'live'];
+      // Status is the coach's to change, not the requester's.
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.userUid == request.auth.uid;
+    }
+
     // ---- community ----
 
     // Posts carry no counter. A like count stored on the document would have to

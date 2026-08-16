@@ -4,25 +4,60 @@
       "collectionGroup": "skills",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isPublished", "order": "ASCENDING" },
-        { "fieldPath": "sortOrder", "order": "ASCENDING" }
+        {
+          "fieldPath": "isPublished",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sortOrder",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "levels",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "skillId", "order": "ASCENDING" },
-        { "fieldPath": "isPublished", "order": "ASCENDING" },
-        { "fieldPath": "idx", "order": "ASCENDING" }
+        {
+          "fieldPath": "skillId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isPublished",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idx",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "drills",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "levelId", "order": "ASCENDING" },
-        { "fieldPath": "idx", "order": "ASCENDING" }
+        {
+          "fieldPath": "levelId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idx",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "coaches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isPublished",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sortOrder",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

@@ -101,6 +101,24 @@ const DRILLS = [
   ['Film yourself and self-check', 'صوّر نفسك وقيّم أداءك', 'Optional, 30s clip', 'اختياري، مقطع ٣٠ ث', false],
 ]
 
+const COACHES = [
+  { id: 'omar', name_en: 'Omar Fathy', name_ar: 'عمر فتحي', skillId: 'muscleup', city_en: 'Cairo', city_ar: 'القاهرة', rating: 4.9, rateEgp: 450 },
+  { id: 'nour', name_en: 'Nour El-Sayed', name_ar: 'نور السيد', skillId: 'boxing', city_en: 'Alexandria', city_ar: 'الإسكندرية', rating: 4.8, rateEgp: 400 },
+  { id: 'karim', name_en: 'Karim Adel', name_ar: 'كريم عادل', skillId: 'sprint', city_en: 'Giza', city_ar: 'الجيزة', rating: 5.0, rateEgp: 500 },
+  { id: 'youssef', name_en: 'Youssef Hany', name_ar: 'يوسف هاني', skillId: 'parkour', city_en: 'Cairo', city_ar: 'القاهرة', rating: 4.7, rateEgp: 380 },
+  { id: 'laila', name_en: 'Laila Mostafa', name_ar: 'ليلى مصطفى', skillId: 'boxing', city_en: 'Cairo', city_ar: 'القاهرة', rating: 4.9, rateEgp: 420 },
+  { id: 'tarek', name_en: 'Tarek Zaki', name_ar: 'طارق زكي', skillId: 'parkour', city_en: 'Alexandria', city_ar: 'الإسكندرية', rating: 4.6, rateEgp: 360 },
+]
+
+const SLOTS = [
+  ['Mon', 'الإثنين', '17:00'],
+  ['Mon', 'الإثنين', '19:00'],
+  ['Tue', 'الثلاثاء', '07:00'],
+  ['Tue', 'الثلاثاء', '18:30'],
+  ['Wed', 'الأربعاء', '17:30'],
+  ['Thu', 'الخميس', '20:00'],
+]
+
 const batch = db.batch()
 let levelCount = 0
 let drillCount = 0
@@ -137,6 +155,21 @@ for (const [order, { levels, ...skill }] of SKILLS.entries()) {
   }
 }
 
+for (const [order, coach] of COACHES.entries()) {
+  batch.set(db.collection('coaches').doc(coach.id), { ...coach, sortOrder: order, isPublished: true })
+  for (const [i, [dayEn, dayAr, time]] of SLOTS.entries()) {
+    batch.set(db.collection('coaches').doc(coach.id).collection('slots').doc(`${coach.id}-${i}`), {
+      idx: i,
+      day_en: dayEn,
+      day_ar: dayAr,
+      time,
+    })
+  }
+}
+
 await batch.commit()
-console.log(`Seeded ${SKILLS.length} skills, ${levelCount} levels, ${drillCount} drills.`)
+console.log(
+  `Seeded ${SKILLS.length} skills, ${levelCount} levels, ${drillCount} drills, ` +
+    `${COACHES.length} coaches, ${COACHES.length * SLOTS.length} slots.`,
+)
 process.exit(0)
