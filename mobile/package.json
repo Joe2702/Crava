@@ -37,5 +37,8 @@
     "test": "node --experimental-strip-types --test lib/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=22.6"
+  }
 }
