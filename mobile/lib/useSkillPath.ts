@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, isDemo } from './firebase'
+import { demo, DEMO_LEVELS, DEMO_SKILL } from './demo'
 import { useAuth } from './auth'
 import type { Level, Skill, UserDoc } from './types'
 import { streakFrom, xpFrom } from './progress'
@@ -30,6 +31,18 @@ function deriveStates(levels: Level[], completed: Set<string>): LevelWithState[]
   }))
 }
 
+function build(skill: Skill, levels: Level[], user: UserDoc, completions: Map<string, Date>): SkillPath {
+  const ids = new Set(completions.keys())
+  return {
+    skill,
+    levels: deriveStates(levels, ids),
+    user,
+    cleared: ids.size,
+    xp: xpFrom(ids.size),
+    streak: streakFrom([...completions.values()]),
+  }
+}
+
 export function useSkillPath(skillId = 'muscleup') {
   const { user } = useAuth()
   const [data, setData] = useState<SkillPath | null>(null)
@@ -39,24 +52,31 @@ export function useSkillPath(skillId = 'muscleup') {
   const load = useCallback(async () => {
     if (!user) return
     setError(null)
+
+    if (isDemo) {
+      setData(build(DEMO_SKILL, DEMO_LEVELS, demo.user, demo.levelCompletions()))
+      setLoading(false)
+      return
+    }
+
     try {
       const [skillSnap, levelSnap, userSnap] = await Promise.all([
-        getDoc(doc(db, 'skills', skillId)),
-        getDocs(query(collection(db, 'levels'), where('skillId', '==', skillId), orderBy('idx'))),
-        getDoc(doc(db, 'users', user.uid)),
+        getDoc(doc(db(), 'skills', skillId)),
+        getDocs(query(collection(db(), 'levels'), where('skillId', '==', skillId), orderBy('idx'))),
+        getDoc(doc(db(), 'users', user.uid)),
       ])
 
       if (!skillSnap.exists()) throw new Error(`Skill "${skillId}" not found — has the seed script been run?`)
       if (!userSnap.exists()) throw new Error('User document missing')
 
-      setData({
-        skill: { id: skillSnap.id, ...skillSnap.data() } as Skill,
-        levels: deriveStates(levelSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Level), new Set()),
-        user: userSnap.data() as UserDoc,
-        xp: 0,
-        streak: 0,
-        cleared: 0,
-      })
+      setData(
+        build(
+          { id: skillSnap.id, ...skillSnap.data() } as Skill,
+          levelSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Level),
+          userSnap.data() as UserDoc,
+          new Map(),
+        ),
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load')
     } finally {
@@ -72,23 +92,20 @@ export function useSkillPath(skillId = 'muscleup') {
   // finishing a level updates the whole screen without a manual refetch.
   useEffect(() => {
     if (!user) return
-    return onSnapshot(collection(db, 'users', user.uid, 'levelCompletions'), (snap) => {
-      const ids = new Set(snap.docs.map((d) => d.id))
-      const dates = snap.docs
-        .map((d) => (d.data().completedAt as Timestamp | null)?.toDate())
-        .filter((d): d is Date => d instanceof Date)
 
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              levels: deriveStates(prev.levels, ids),
-              cleared: ids.size,
-              xp: xpFrom(ids.size),
-              streak: streakFrom(dates),
-            }
-          : prev,
-      )
+    if (isDemo) {
+      return demo.subscribe(() => {
+        setData(build(DEMO_SKILL, DEMO_LEVELS, demo.user, demo.levelCompletions()))
+      })
+    }
+
+    return onSnapshot(collection(db(), 'users', user.uid, 'levelCompletions'), (snap) => {
+      const completions = new Map<string, Date>()
+      for (const d of snap.docs) {
+        const at = (d.data().completedAt as Timestamp | null)?.toDate()
+        if (at) completions.set(d.id, at)
+      }
+      setData((prev) => (prev ? build(prev.skill, prev.levels, prev.user, completions) : prev))
     })
   }, [user])
 

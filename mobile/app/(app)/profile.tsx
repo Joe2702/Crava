@@ -4,7 +4,8 @@ import { Txt } from '../../components/Txt'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { doc, updateDoc } from 'firebase/firestore'
-import { db } from '../../lib/firebase'
+import { db, isDemo } from '../../lib/firebase'
+import { demo } from '../../lib/demo'
 import { useAuth } from '../../lib/auth'
 import { localizeNumber, useLocale } from '../../lib/i18n'
 import { useSkillPath } from '../../lib/useSkillPath'
@@ -33,8 +34,9 @@ export default function Profile() {
 
   const toggleNotif = async (value: boolean) => {
     if (!authUser) return
+    if (isDemo) return void demo.updateUser({ notifEnabled: value })
     try {
-      await updateDoc(doc(db, 'users', authUser.uid), { notifEnabled: value })
+      await updateDoc(doc(db(), 'users', authUser.uid), { notifEnabled: value })
       void reload()
     } catch (e) {
       Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')

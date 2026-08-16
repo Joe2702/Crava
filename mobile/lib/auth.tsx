@@ -10,10 +10,18 @@ import {
   type User,
 } from '@firebase/auth'
 import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
-import { auth, db } from './firebase'
+import { auth, db, isDemo } from './firebase'
+import { demo } from './demo'
+
+/** Enough of a user for the app; in demo mode this is a stand-in, not a real one. */
+export interface SessionUser {
+  uid: string
+  email: string | null
+  displayName: string | null
+}
 
 interface AuthValue {
-  user: User | null
+  user: SessionUser | null
   loading: boolean
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
@@ -24,6 +32,8 @@ interface AuthValue {
 
 const AuthCtx = createContext<AuthValue | null>(null)
 
+const DEMO_UID = 'demo-user'
+
 /**
  * Firebase Auth has no server-side "on user created" hook that can run before
  * the client reads its own document, so the user doc is created here right
@@ -31,7 +41,7 @@ const AuthCtx = createContext<AuthValue | null>(null)
  */
 async function ensureUserDoc(user: User, displayName?: string) {
   await setDoc(
-    doc(db, 'users', user.uid),
+    doc(db(), 'users', user.uid),
     {
       displayName: displayName ?? user.displayName ?? null,
       locale: 'en',
@@ -51,19 +61,26 @@ async function ensureUserDoc(user: User, displayName?: string) {
  */
 async function deleteOwnData(uid: string) {
   for (const sub of ['drillCompletions', 'levelCompletions']) {
-    const snap = await getDocs(collection(db, 'users', uid, sub))
+    const snap = await getDocs(collection(db(), 'users', uid, sub))
     await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)))
   }
-  await deleteDoc(doc(db, 'users', uid))
+  await deleteDoc(doc(db(), 'users', uid))
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<SessionUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (next) => {
-      setUser(next)
+    if (isDemo) {
+      const sync = () =>
+        setUser(demo.isSignedIn ? { uid: DEMO_UID, email: null, displayName: demo.user.displayName } : null)
+      sync()
+      setLoading(false)
+      return demo.subscribe(sync)
+    }
+    return onAuthStateChanged(auth(), (next) => {
+      setUser(next ? { uid: next.uid, email: next.email, displayName: next.displayName } : null)
       setLoading(false)
     })
   }, [])
@@ -73,19 +90,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       signUp: async (email, password, displayName) => {
-        const cred = await createUserWithEmailAndPassword(auth, email, password)
+        if (isDemo) return void demo.signIn(displayName || 'Yassin')
+        const cred = await createUserWithEmailAndPassword(auth(), email, password)
         if (displayName) await updateProfile(cred.user, { displayName })
         await ensureUserDoc(cred.user, displayName)
       },
       signIn: async (email, password) => {
-        const cred = await signInWithEmailAndPassword(auth, email, password)
+        if (isDemo) return void demo.signIn()
+        const cred = await signInWithEmailAndPassword(auth(), email, password)
         // covers accounts created before this doc shape existed
         await ensureUserDoc(cred.user)
       },
-      signOut: () => fbSignOut(auth),
-      resetPassword: (email) => sendPasswordResetEmail(auth, email),
+      signOut: async () => {
+        if (isDemo) return void demo.signOut()
+        await fbSignOut(auth())
+      },
+      resetPassword: async (email) => {
+        if (isDemo) return
+        await sendPasswordResetEmail(auth(), email)
+      },
       deleteAccount: async () => {
-        const current = auth.currentUser
+        if (isDemo) return void demo.reset()
+        const current = auth().currentUser
         if (!current) throw new Error('Not signed in')
         // Firestore first: once the auth record is gone the rules no longer
         // recognise the owner, and the documents could not be removed.

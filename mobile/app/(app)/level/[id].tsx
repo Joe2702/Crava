@@ -4,7 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { Txt } from '../../../components/Txt'
-import { db } from '../../../lib/firebase'
+import { db, isDemo } from '../../../lib/firebase'
+import { demo, DEMO_DRILLS, DEMO_LEVELS } from '../../../lib/demo'
 import { useAuth } from '../../../lib/auth'
 import type { Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
@@ -29,11 +30,20 @@ export default function LevelScreen() {
 
   const load = useCallback(async () => {
     if (!user || !id) return
+
+    if (isDemo) {
+      setLevel(DEMO_LEVELS.find((l) => l.id === id) ?? null)
+      setDrills(DEMO_DRILLS.filter((d) => d.levelId === id))
+      setDone(demo.drillsDone())
+      setLoading(false)
+      return
+    }
+
     try {
       const [levelSnap, drillSnap, doneSnap] = await Promise.all([
-        getDoc(doc(db, 'levels', id)),
-        getDocs(query(collection(db, 'drills'), where('levelId', '==', id), orderBy('idx'))),
-        getDocs(collection(db, 'users', user.uid, 'drillCompletions')),
+        getDoc(doc(db(), 'levels', id)),
+        getDocs(query(collection(db(), 'drills'), where('levelId', '==', id), orderBy('idx'))),
+        getDocs(collection(db(), 'users', user.uid, 'drillCompletions')),
       ])
       if (!levelSnap.exists()) throw new Error('Level not found')
       setLevel({ id: levelSnap.id, ...levelSnap.data() } as Level)
@@ -52,6 +62,11 @@ export default function LevelScreen() {
 
   const toggleDrill = async (drillId: string) => {
     if (!user) return
+    if (isDemo) {
+      demo.toggleDrill(drillId)
+      setDone(demo.drillsDone())
+      return
+    }
     const wasDone = done.has(drillId)
     // optimistic — this write grants nothing on its own, and the Cloud Function
     // re-checks completions server-side before awarding anything
@@ -62,7 +77,7 @@ export default function LevelScreen() {
       return next
     })
 
-    const ref = doc(db, 'users', user.uid, 'drillCompletions', drillId)
+    const ref = doc(db(), 'users', user.uid, 'drillCompletions', drillId)
     try {
       if (wasDone) await deleteDoc(ref)
       else await setDoc(ref, { completedAt: serverTimestamp() })
@@ -79,12 +94,25 @@ export default function LevelScreen() {
 
   const complete = async () => {
     if (!user) return
+
+    if (isDemo) {
+      const { alreadyCompleted } = demo.completeLevel(id)
+      Alert.alert(
+        alreadyCompleted ? t('Already cleared', 'تم إنهاؤه سابقاً') : t('Level cleared', 'تم إنهاء المستوى'),
+        alreadyCompleted
+          ? t('You have already finished this level.', 'لقد أنهيت هذا المستوى بالفعل.')
+          : t('+120 XP', '+١٢٠ نقطة'),
+        [{ text: t('Continue', 'متابعة'), onPress: () => router.back() }],
+      )
+      return
+    }
+
     setSaving(true)
     try {
       // Create-only under the rules, so a second attempt is rejected rather
       // than re-awarding. serverTimestamp() is required — the rules compare it
       // to request.time so completion dates cannot be backdated.
-      await setDoc(doc(db, 'users', user.uid, 'levelCompletions', id), {
+      await setDoc(doc(db(), 'users', user.uid, 'levelCompletions', id), {
         completedAt: serverTimestamp(),
       })
       Alert.alert(

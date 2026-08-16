@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app'
 // Auth is imported from @firebase/auth rather than firebase/auth on purpose.
 // The umbrella `firebase` package has no "react-native" export condition, so
 // firebase/auth resolves to the browser build, where getReactNativePersistence
@@ -7,9 +7,9 @@ import { initializeApp, getApps, getApp } from 'firebase/app'
 // so Metro picks its React Native build. Import ALL auth APIs from here: mixing
 // the two paths would load two copies of the module and the auth instance from
 // one would not be recognised by functions from the other.
-import { initializeAuth, getAuth, getReactNativePersistence } from '@firebase/auth'
-import { initializeFirestore } from 'firebase/firestore'
-import { getFunctions } from 'firebase/functions'
+import { initializeAuth, getAuth, getReactNativePersistence, type Auth } from '@firebase/auth'
+import { initializeFirestore, type Firestore } from 'firebase/firestore'
+import { getFunctions, type Functions } from 'firebase/functions'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
@@ -22,24 +22,36 @@ const config = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 }
 
-if (!config.apiKey || !config.projectId) {
-  throw new Error(
-    'Missing Firebase config. Copy mobile/.env.example to mobile/.env and fill it in from the Firebase console.',
-  )
-}
+/**
+ * With no Firebase config the app runs against an in-memory store instead of
+ * failing to start, so it can be opened and demonstrated before any backend
+ * exists. Fill mobile/.env to switch to the real backend.
+ */
+export const isDemo = !config.apiKey || !config.projectId
 
 const isNative = Platform.OS !== 'web'
 
-export const app = getApps().length ? getApp() : initializeApp(config)
+let _app: FirebaseApp | null = null
+let _auth: Auth | null = null
+let _db: Firestore | null = null
+let _functions: Functions | null = null
 
-export const auth = isNative
-  ? initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) })
-  : getAuth(app)
+if (!isDemo) {
+  _app = getApps().length ? getApp() : initializeApp(config)
+  _auth = isNative
+    ? initializeAuth(_app, { persistence: getReactNativePersistence(AsyncStorage) })
+    : getAuth(_app)
+  // React Native's networking stack does not support the streaming reads
+  // Firestore prefers, so it must be told to long-poll or the first query hangs.
+  _db = initializeFirestore(_app, isNative ? { experimentalForceLongPolling: true } : {})
+  _functions = getFunctions(_app, process.env.EXPO_PUBLIC_FIREBASE_REGION || 'europe-west1')
+}
 
-// React Native's networking stack does not support the streaming reads Firestore
-// prefers, so it must be told to long-poll or the first query hangs.
-export const db = initializeFirestore(app,
-  isNative ? { experimentalForceLongPolling: true } : {},
-)
+function required<T>(value: T | null, name: string): T {
+  if (!value) throw new Error(`${name} is unavailable in demo mode — check isDemo before using it.`)
+  return value
+}
 
-export const functions = getFunctions(app, process.env.EXPO_PUBLIC_FIREBASE_REGION || 'europe-west1')
+export const auth = () => required(_auth, 'auth')
+export const db = () => required(_db, 'db')
+export const functions = () => required(_functions, 'functions')

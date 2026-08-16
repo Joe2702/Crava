@@ -36,7 +36,7 @@ export function LessonVideo({ levelId, hasVideo }: { levelId: string; hasVideo: 
     setState({ kind: 'loading' })
     try {
       const call = httpsCallable<{ levelId: string }, { url: string; expiresAt: number }>(
-        functions,
+        functions(),
         'getPlaybackUrl',
       )
       const { data } = await call({ levelId })

@@ -7,7 +7,8 @@ import { useAuth } from '../../lib/auth'
 import { useLocale } from '../../lib/i18n'
 import { ErrorText, Field, PrimaryButton } from '../../components/ui'
 import { LanguageToggle } from '../../components/LanguageToggle'
-import { colors } from '../../theme/tokens'
+import { colors, radius } from '../../theme/tokens'
+import { isDemo } from '../../lib/firebase'
 
 export default function SignIn() {
   const { signIn, resetPassword } = useAuth()
@@ -58,6 +59,20 @@ export default function SignIn() {
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           <LanguageToggle />
         </View>
+
+        {isDemo && (
+          <View style={{ backgroundColor: colors.accentTint, borderRadius: radius.sm, padding: 12, gap: 4 }}>
+            <Txt style={{ fontSize: 13, fontWeight: '700', color: colors.accentDark }}>
+              {t('Demo mode', 'وضع العرض')}
+            </Txt>
+            <Txt style={{ fontSize: 13, lineHeight: 19, color: colors.accentDark }}>
+              {t(
+                'No backend configured — sign in with anything. Progress is kept in memory and lost on restart.',
+                'لا يوجد خادم مهيأ — سجّل الدخول بأي بيانات. التقدم مؤقت ويُفقد عند إعادة التشغيل.',
+              )}
+            </Txt>
+          </View>
+        )}
 
         <View style={{ gap: 8 }}>
           <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>Crava</Txt>

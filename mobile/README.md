@@ -14,17 +14,21 @@ npx expo start
 3. Your phone and computer must be on the same Wi-Fi. If they aren't, or the
    connection hangs, run `npx expo start --tunnel` instead.
 
-### Before it will run
+### Demo mode — no setup needed
 
-The app needs a Firebase project. Follow `firebase/README.md` first — create the
-project, enable Email/Password auth, create Firestore, deploy the rules and
-functions, seed the content, then fill in `mobile/.env`. Without that the app
-throws on startup with a message naming the missing config.
+With no `mobile/.env`, the app runs against an in-memory store so it can be
+opened immediately. Sign in with any email and password. Everything works —
+levels, drills, XP, streak, Arabic — but nothing is saved, so progress resets
+when the app restarts. A banner on the sign-in screen says so.
+
+To use the real backend, follow `firebase/README.md` and fill in `mobile/.env`;
+the app switches over automatically.
 
 ### Sign in
 
-Create an account from the sign-up screen. Firebase Auth does not require email
-confirmation by default, so you are signed straight in.
+Demo mode: anything works. With Firebase configured, create an account from the
+sign-up screen — email confirmation is off by default, so you are signed
+straight in.
 
 ### What to try
 
