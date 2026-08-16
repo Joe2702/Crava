@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublished", "order": "ASCENDING" },
+        { "fieldPath": "sortOrder", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "levels",
       "queryScope": "COLLECTION",
       "fields": [

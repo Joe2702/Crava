@@ -1,11 +1,12 @@
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native' 
-import { Txt } from '../../components/Txt'
+import { Txt } from '../../../components/Txt'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useSkillPath } from '../../lib/useSkillPath'
-import { localizeNumber, useLocale } from '../../lib/i18n'
-import { LanguageToggle } from '../../components/LanguageToggle'
-import { cardShadow, colors, radius } from '../../theme/tokens'
+import { useSkillPath } from '../../../lib/useSkillPath'
+import { localizeNumber, useLocale } from '../../../lib/i18n'
+import { LanguageToggle } from '../../../components/LanguageToggle'
+import { cardShadow, colors, radius } from '../../../theme/tokens'
+import { TAB_BAR_CLEARANCE } from '../../../components/TabBar'
 
 const XP_MAX = 2000
 
@@ -47,7 +48,7 @@ export default function Home() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32, gap: 18 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: TAB_BAR_CLEARANCE + insets.bottom, gap: 18 }}
       refreshControl={<RefreshControl refreshing={false} onRefresh={reload} tintColor={colors.accent} />}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

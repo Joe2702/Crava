@@ -7,13 +7,85 @@ import type { Drill, Level, Skill, UserDoc } from './types'
  * demonstrate the app, not to be a second implementation to maintain.
  */
 
-const LEVEL_NAMES: [string, string][] = [
-  ['Dead Hang', 'التعليق الميت'],
-  ['Scapular Pulls', 'سحب لوح الكتف'],
-  ['Strict Pull-Up', 'العقلة الصارمة'],
-  ['Explosive Pull', 'السحب الانفجاري'],
-  ['Transition Drill', 'تمرين الانتقال'],
-  ['Full Muscle-Up', 'المسل أب الكامل'],
+/** Mirrors firebase/seed/seed.mjs. The two must be changed together. */
+const CATALOG: {
+  id: string
+  name_en: string
+  name_ar: string
+  category_en: string
+  category_ar: string
+  coach_name_en: string
+  coach_name_ar: string
+  levels: [string, string][]
+}[] = [
+  {
+    id: 'muscleup',
+    name_en: 'Full Muscle-Up',
+    name_ar: 'المسل أب الكامل',
+    category_en: 'Calisthenics',
+    category_ar: 'كاليسثينكس',
+    coach_name_en: 'Omar Fathy',
+    coach_name_ar: 'عمر فتحي',
+    levels: [
+      ['Dead Hang', 'التعليق الميت'],
+      ['Scapular Pulls', 'سحب لوح الكتف'],
+      ['Strict Pull-Up', 'العقلة الصارمة'],
+      ['Explosive Pull', 'السحب الانفجاري'],
+      ['Transition Drill', 'تمرين الانتقال'],
+      ['Full Muscle-Up', 'المسل أب الكامل'],
+    ],
+  },
+  {
+    id: 'boxing',
+    name_en: 'Boxing Combos',
+    name_ar: 'توليفات الملاكمة',
+    category_en: 'Boxing',
+    category_ar: 'ملاكمة',
+    coach_name_en: 'Nour El-Sayed',
+    coach_name_ar: 'نور السيد',
+    levels: [
+      ['Stance & Guard', 'الوقفة والحماية'],
+      ['The Jab', 'اللكمة المستقيمة'],
+      ['Jab–Cross', 'جاب – كروس'],
+      ['Hook & Slip', 'الهوك والمراوغة'],
+      ['Three-Punch Combo', 'توليفة ثلاث لكمات'],
+      ['Ring Combinations', 'توليفات الحلبة'],
+    ],
+  },
+  {
+    id: 'sprint',
+    name_en: 'Sprint Mechanics',
+    name_ar: 'ميكانيكا العدو',
+    category_en: 'Athletics',
+    category_ar: 'ألعاب قوى',
+    coach_name_en: 'Karim Adel',
+    coach_name_ar: 'كريم عادل',
+    levels: [
+      ['Posture & Lean', 'وضعية الجسم والميل'],
+      ['A-Skip', 'القفز المتناوب'],
+      ['Arm Mechanics', 'حركة الذراعين'],
+      ['Acceleration', 'التسارع'],
+      ['Top Speed', 'السرعة القصوى'],
+      ['Block Start', 'الانطلاق من البلوك'],
+    ],
+  },
+  {
+    id: 'parkour',
+    name_en: 'Parkour Basics',
+    name_ar: 'أساسيات الباركور',
+    category_en: 'Parkour',
+    category_ar: 'باركور',
+    coach_name_en: 'Youssef Hany',
+    coach_name_ar: 'يوسف هاني',
+    levels: [
+      ['Landing & Roll', 'الهبوط والدحرجة'],
+      ['Precision Jump', 'قفزة الدقة'],
+      ['Vault Basics', 'أساسيات العبور'],
+      ['Kong Vault', 'قفزة الكونغ'],
+      ['Cat Leap', 'قفزة القط'],
+      ['Wall Run', 'الجري على الحائط'],
+    ],
+  },
 ]
 
 const DRILL_TEMPLATE: [string, string, string, string, boolean][] = [
@@ -23,28 +95,24 @@ const DRILL_TEMPLATE: [string, string, string, string, boolean][] = [
   ['Film yourself and self-check', 'صوّر نفسك وقيّم أداءك', 'Optional, 30s clip', 'اختياري، مقطع ٣٠ ث', false],
 ]
 
-export const DEMO_SKILL: Skill = {
-  id: 'muscleup',
-  name_en: 'Full Muscle-Up',
-  name_ar: 'المسل أب الكامل',
-  category_en: 'Calisthenics',
-  category_ar: 'كاليسثينكس',
-  coach_name_en: 'Omar Fathy',
-  coach_name_ar: 'عمر فتحي',
-  sortOrder: 0,
-  isPublished: true,
-}
-
-export const DEMO_LEVELS: Level[] = LEVEL_NAMES.map(([en, ar], i) => ({
-  id: `muscleup-${i + 1}`,
-  skillId: 'muscleup',
-  idx: i + 1,
-  name_en: en,
-  name_ar: ar,
-  hasVideo: false,
-  durationS: null,
+export const DEMO_SKILLS: Skill[] = CATALOG.map(({ levels: _levels, ...s }, order) => ({
+  ...s,
+  sortOrder: order,
   isPublished: true,
 }))
+
+export const DEMO_LEVELS: Level[] = CATALOG.flatMap((skill) =>
+  skill.levels.map(([en, ar], i) => ({
+    id: `${skill.id}-${i + 1}`,
+    skillId: skill.id,
+    idx: i + 1,
+    name_en: en,
+    name_ar: ar,
+    hasVideo: false,
+    durationS: null,
+    isPublished: true,
+  })),
+)
 
 export const DEMO_DRILLS: Drill[] = DEMO_LEVELS.flatMap((level) =>
   DRILL_TEMPLATE.map(([en, ar, mEn, mAr, required], j) => ({
@@ -58,6 +126,8 @@ export const DEMO_DRILLS: Drill[] = DEMO_LEVELS.flatMap((level) =>
     isRequired: required,
   })),
 )
+
+export const levelsForSkill = (skillId: string) => DEMO_LEVELS.filter((l) => l.skillId === skillId)
 
 interface DemoState {
   signedIn: boolean

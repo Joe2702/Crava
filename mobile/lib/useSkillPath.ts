@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from 'firebase/firestore'
 import { db, isDemo } from './firebase'
-import { demo, DEMO_LEVELS, DEMO_SKILL } from './demo'
+import { demo, DEMO_SKILLS, levelsForSkill } from './demo'
 import { useAuth } from './auth'
+import { useCatalog } from './catalog'
 import type { Level, Skill, UserDoc } from './types'
 import { streakFrom, xpFrom } from './progress'
 
@@ -55,18 +56,22 @@ function build(skill: Skill, levels: Level[], user: UserDoc, completions: Map<st
   }
 }
 
-export function useSkillPath(skillId = 'muscleup') {
+/** Reads the catalog's active skill unless a specific one is asked for. */
+export function useSkillPath(skillIdArg?: string) {
   const { user } = useAuth()
+  const { activeSkillId } = useCatalog()
+  const skillId = skillIdArg ?? activeSkillId
   const [data, setData] = useState<SkillPath | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    if (!user) return
+    if (!user || !skillId) return
     setError(null)
 
     if (isDemo) {
-      setData(build(DEMO_SKILL, DEMO_LEVELS, demo.user, demo.levelCompletions()))
+      const skill = DEMO_SKILLS.find((s) => s.id === skillId)
+      if (skill) setData(build(skill, levelsForSkill(skillId), demo.user, demo.levelCompletions()))
       setLoading(false)
       return
     }
@@ -124,7 +129,9 @@ export function useSkillPath(skillId = 'muscleup') {
 
     if (isDemo) {
       return demo.subscribe(() => {
-        setData(build(DEMO_SKILL, DEMO_LEVELS, demo.user, demo.levelCompletions()))
+        setData((prev) =>
+          prev ? build(prev.skill, prev.levels, demo.user, demo.levelCompletions()) : prev,
+        )
       })
     }
 

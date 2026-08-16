@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/ibm-plex-sans-arabic'
 import { AuthProvider, useAuth } from '../lib/auth'
 import { LocaleProvider, useLocale } from '../lib/i18n'
+import { CatalogProvider } from '../lib/catalog'
 import { colors } from '../theme/tokens'
 
 void SplashScreen.preventAutoHideAsync()
@@ -69,7 +70,9 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <LocaleProvider>
         <AuthProvider>
-          <AuthGate />
+          <CatalogProvider>
+            <AuthGate />
+          </CatalogProvider>
         </AuthProvider>
       </LocaleProvider>
     </SafeAreaProvider>
