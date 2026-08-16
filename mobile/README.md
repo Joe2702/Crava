@@ -54,10 +54,19 @@ Entirely in GitHub Actions — nothing to install, no accounts, no secrets.
 
 **Actions** tab → **Build APK** → **Run workflow** → pick a backend → **Run**.
 
-When it finishes (~20-30 min on a cold cache, faster after), the run page has an
-**Artifacts** section at the
-bottom. Download it, unzip, and open the `.apk` on an Android phone. Android
-warns about installing outside the Play Store; allow it.
+It takes about nine minutes. When it finishes, the APK is published as a GitHub
+Release, so the newest build is always at:
+
+    https://github.com/Joe2702/Crava/releases/latest/download/crava.apk
+
+Open that on the phone itself and tap the download. Android warns about
+installing outside the Play Store; allow it. Each build also gets its own
+permanent release under **Releases**, titled with the backend and commit, so an
+older build stays reachable after a newer one lands.
+
+The run page also carries the same APK as a build **Artifact**, but that is a zip
+and only downloadable by someone signed in to GitHub — the release link is the
+one to send people. Untick **publish** if you want a build without a release.
 
 The two backend options:
 

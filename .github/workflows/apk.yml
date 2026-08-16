@@ -17,9 +17,15 @@ on:
         description: Build for every CPU architecture (needed only for x86 emulators; ~4x slower)
         default: false
         type: boolean
+      publish:
+        description: Publish as a GitHub Release (a plain link a phone can install from)
+        default: true
+        type: boolean
 
+# contents: write is for creating the release below. Everything else here only
+# reads the repo.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -131,7 +137,10 @@ jobs:
             exit 1
           fi
           echo "Found $found ($(du -h "$found" | cut -f1))"
-          echo "path=$found" >> "$GITHUB_OUTPUT"
+          # Copied to a fixed name so the release asset URL never changes.
+          cp "$found" crava.apk
+          echo "path=crava.apk" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h crava.apk | cut -f1)" >> "$GITHUB_OUTPUT"
           echo "tag=crava-${{ inputs.backend }}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
@@ -141,6 +150,43 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # A release asset is a direct link with no login and no zip, so it can be
+      # opened and installed straight from a phone browser. The artifact above
+      # can only be downloaded as a zip by someone signed in to GitHub.
+      #
+      # The asset is always named crava.apk, which is what keeps
+      # /releases/latest/download/crava.apk pointing at the newest build. The
+      # release title and notes say which backend it talks to.
+      - name: Publish release
+        if: inputs.publish
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: build-${{ github.run_number }}
+          ARCHS_LABEL: ${{ inputs.all_architectures && 'all four' || 'arm64-v8a only' }}
+        run: |
+          # Quoted heredoc: nothing in the notes is expanded by the shell.
+          cat > notes.md <<'EOF'
+          Open **crava.apk** below on an Android phone and tap it. Android will warn
+          about installing outside the Play Store; allow it.
+
+          Signed with Expo's debug keystore — fine for testing and for sending to
+          people directly, but a Play Store release needs a keystore of your own,
+          because you cannot ship updates that install over a differently signed APK.
+          EOF
+          {
+            echo "Backend: **${{ inputs.backend }}**"
+            echo "Architectures: $ARCHS_LABEL"
+            echo "Commit: ${GITHUB_SHA::7}"
+            echo
+          } | cat - notes.md > notes-full.md
+
+          gh release create "$TAG" crava.apk \
+            --title "Crava ${{ inputs.backend }} · ${GITHUB_SHA::7}" \
+            --target "$GITHUB_SHA" \
+            --notes-file notes-full.md
+          echo "url=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/crava.apk" >> "$GITHUB_OUTPUT"
+
       - name: Summary
         run: |
           {
@@ -148,10 +194,22 @@ jobs:
             echo
             echo "Backend: **${{ inputs.backend }}**"
             echo
-            echo "Architectures: \`${{ inputs.all_architectures && 'all four' || 'arm64-v8a only' }}\`"
+            echo "Architectures: ${{ inputs.all_architectures && 'all four' || 'arm64-v8a only' }}"
             echo
-            echo "Download **${{ steps.apk.outputs.tag }}** from the Artifacts section of this run,"
-            echo "unzip it, and open the .apk on an Android phone."
+            echo "Size: ${{ steps.apk.outputs.size }}"
+            echo
+            if [ -n "${{ steps.release.outputs.url }}" ]; then
+              echo "### Install on a phone"
+              echo
+              echo "Open this on the phone itself and tap the downloaded file:"
+              echo
+              echo "    ${{ steps.release.outputs.url }}"
+              echo
+              echo "Always-newest link: <https://github.com/$GITHUB_REPOSITORY/releases/latest/download/crava.apk>"
+            else
+              echo "Publishing was skipped. Download **${{ steps.apk.outputs.tag }}** from the"
+              echo "Artifacts section of this run and unzip it."
+            fi
             echo
             echo "Android will warn about installing outside the Play Store — allow it."
           } >> "$GITHUB_STEP_SUMMARY"
