@@ -45,6 +45,14 @@ export interface UserDoc {
   city: string | null
   notifEnabled: boolean
   onboardedAt: number | null
+  /**
+   * Where the path begins for this user. Onboarding lets people say they are
+   * already past the basics; this moves the starting point without marking the
+   * skipped levels complete, so no XP is granted for work not done.
+   */
+  startLevelIdx: number | null
+  /** Sessions per week the user committed to. Drives reminders. */
+  weeklyGoal: number | null
   createdAt: number
   entitlement: {
     productId: string

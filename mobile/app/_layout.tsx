@@ -14,6 +14,7 @@ import {
 import { AuthProvider, useAuth } from '../lib/auth'
 import { LocaleProvider, useLocale } from '../lib/i18n'
 import { CatalogProvider } from '../lib/catalog'
+import { ProfileProvider, useProfile } from '../lib/profile'
 import { colors } from '../theme/tokens'
 
 void SplashScreen.preventAutoHideAsync()
@@ -28,6 +29,7 @@ function Loading() {
 
 function AuthGate() {
   const { user, loading } = useAuth()
+  const { profile, ready: profileReady } = useProfile()
   const { ready, isRTL } = useLocale()
   const segments = useSegments()
   const router = useRouter()
@@ -35,9 +37,15 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return
     const inAuthGroup = segments[0] === '(auth)'
-    if (!user && !inAuthGroup) router.replace('/sign-in')
-    else if (user && inAuthGroup) router.replace('/')
-  }, [user, loading, segments, router])
+    if (!user && !inAuthGroup) return void router.replace('/sign-in')
+    if (user && inAuthGroup) return void router.replace('/')
+
+    // Onboarding runs once, and only once the profile has actually been read —
+    // acting on a not-yet-loaded document would show it to returning users.
+    if (!user || !profileReady) return
+    const onOnboarding = (segments as string[]).includes('onboarding')
+    if (profile && !profile.onboardedAt && !onOnboarding) router.replace('/onboarding')
+  }, [user, loading, segments, router, profile, profileReady])
 
   if (loading || !ready) return <Loading />
 
@@ -70,9 +78,11 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <LocaleProvider>
         <AuthProvider>
-          <CatalogProvider>
-            <AuthGate />
-          </CatalogProvider>
+          <ProfileProvider>
+            <CatalogProvider>
+              <AuthGate />
+            </CatalogProvider>
+          </ProfileProvider>
         </AuthProvider>
       </LocaleProvider>
     </SafeAreaProvider>

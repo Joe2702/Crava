@@ -48,6 +48,8 @@ async function ensureUserDoc(user: User, displayName?: string) {
       city: null,
       notifEnabled: true,
       onboardedAt: null,
+      startLevelIdx: null,
+      weeklyGoal: null,
       createdAt: serverTimestamp(),
       entitlement: null,
     },

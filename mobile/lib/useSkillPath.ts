@@ -20,15 +20,29 @@ export interface SkillPath {
   cleared: number
 }
 
-// Levels unlock strictly in order: everything up to the first incomplete level
-// is done, that one is current, the rest are locked.
-function deriveStates(levels: Level[], completed: Set<string>): LevelWithState[] {
+/**
+ * Levels unlock in order: everything cleared is done, the first uncleared one
+ * is current, the rest are locked.
+ *
+ * `startLevelIdx` lets someone who is already past the basics begin further
+ * along. It only unlocks — it never marks a level done, so no XP is granted
+ * for work that was not done, and the skipped levels stay open to go back to.
+ */
+function deriveStates(levels: Level[], completed: Set<string>, startLevelIdx: number | null): LevelWithState[] {
   const sorted = [...levels].sort((a, b) => a.idx - b.idx)
-  const firstIncomplete = sorted.findIndex((l) => !completed.has(l.id))
-  const currentIdx = firstIncomplete === -1 ? sorted.length : firstIncomplete
+  const start = startLevelIdx ?? 1
+  const firstUncleared = sorted.findIndex((l) => !completed.has(l.id) && l.idx >= start)
+  const currentIdx = firstUncleared === -1 ? sorted.length : firstUncleared
+
   return sorted.map((l, i) => ({
     ...l,
-    state: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'locked',
+    state: completed.has(l.id)
+      ? 'done'
+      : i === currentIdx
+        ? 'current'
+        : l.idx < start
+          ? 'current' // skipped at onboarding, still open to go back to
+          : 'locked',
   }))
 }
 
@@ -39,6 +53,8 @@ function blankProfile(displayName: string | null): UserDoc {
     city: null,
     notifEnabled: true,
     onboardedAt: null,
+    startLevelIdx: null,
+    weeklyGoal: null,
     createdAt: Date.now(),
     entitlement: null,
   }
@@ -48,7 +64,7 @@ function build(skill: Skill, levels: Level[], user: UserDoc, completions: Map<st
   const ids = new Set(completions.keys())
   return {
     skill,
-    levels: deriveStates(levels, ids),
+    levels: deriveStates(levels, ids, user.startLevelIdx),
     user,
     cleared: ids.size,
     xp: xpFrom(ids.size),

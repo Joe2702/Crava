@@ -7,10 +7,13 @@ import { Txt } from '../../../components/Txt'
 import { db, isDemo } from '../../../lib/firebase'
 import { demo, DEMO_DRILLS, DEMO_LEVELS } from '../../../lib/demo'
 import { useAuth } from '../../../lib/auth'
+import { useProfile } from '../../../lib/profile'
+import { canOpenLevel } from '../../../lib/entitlement'
 import type { Drill, Level } from '../../../lib/types'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { PrimaryButton } from '../../../components/ui'
 import { LessonVideo } from '../../../components/LessonVideo'
+import { IconLock } from '../../../components/Icons'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function LevelScreen() {
@@ -18,6 +21,7 @@ export default function LevelScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { user } = useAuth()
+  const { profile } = useProfile()
   const { t, field, locale, isRTL } = useLocale()
 
   const [level, setLevel] = useState<Level | null>(null)
@@ -144,6 +148,14 @@ export default function LevelScreen() {
     )
   }
 
+  // Paid levels are gated here so the lesson is never rendered for someone who
+  // cannot open it. This is a UI guard, not the enforcement: the playback URL
+  // is signed server-side and checks the entitlement there, because a check
+  // that lives in the app is only a suggestion.
+  if (level && !canOpenLevel(level.idx, profile?.entitlement ?? null)) {
+    return <LockedLevel name={field(level, 'name')} idx={level.idx} />
+  }
+
   const requiredDone = drills.filter((d) => d.isRequired).every((d) => done.has(d.id))
 
   return (
@@ -233,5 +245,58 @@ export default function LevelScreen() {
         busy={saving}
       />
     </ScrollView>
+  )
+}
+
+function LockedLevel({ name, idx }: { name: string; idx: number }) {
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const { t, locale } = useLocale()
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg,
+        padding: 24,
+        paddingTop: insets.top + 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 14,
+      }}
+    >
+      <View
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: radius.pill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.accentTint,
+        }}
+      >
+        <IconLock size={30} color={colors.accentDark} />
+      </View>
+      <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
+        {t(`Level ${idx}`, `المستوى ${localizeNumber(idx, locale)}`)}
+      </Txt>
+      <Txt style={{ fontSize: 24, fontWeight: '700', letterSpacing: -0.7, color: colors.text, textAlign: 'center' }}>
+        {name}
+      </Txt>
+      <Txt style={{ fontSize: 15, lineHeight: 22, color: colors.textSecondary, textAlign: 'center', maxWidth: 300 }}>
+        {t(
+          'Level 1 of every skill is free. The rest come with Crava Pro.',
+          'المستوى الأول من كل مهارة مجاني. الباقي مع كرافا برو.',
+        )}
+      </Txt>
+      <View style={{ alignSelf: 'stretch', marginTop: 10, gap: 6 }}>
+        <PrimaryButton label={t('See Crava Pro', 'اعرف كرافا برو')} onPress={() => router.push('/paywall')} />
+        <Pressable onPress={() => router.back()} accessibilityRole="button">
+          <Txt style={{ textAlign: 'center', padding: 12, fontSize: 15, color: colors.textSecondary }}>
+            {t('Back', 'رجوع')}
+          </Txt>
+        </Pressable>
+      </View>
+    </View>
   )
 }

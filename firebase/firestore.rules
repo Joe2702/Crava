@@ -60,7 +60,8 @@ service cloud.firestore {
       allow create: if isOwner(uid);
       allow update: if isOwner(uid)
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['displayName', 'locale', 'city', 'notifEnabled', 'onboardedAt']);
+                         .hasOnly(['displayName', 'locale', 'city', 'notifEnabled', 'onboardedAt',
+                                   'startLevelIdx', 'weeklyGoal']);
       allow delete: if isOwner(uid);
 
       // Ticking a drill grants nothing by itself; it is only an input to the

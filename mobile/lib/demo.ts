@@ -143,6 +143,8 @@ function freshUser(displayName = 'Yassin'): UserDoc {
     city: null,
     notifEnabled: true,
     onboardedAt: null,
+    startLevelIdx: null,
+    weeklyGoal: null,
     createdAt: Date.now(),
     entitlement: null,
   }
