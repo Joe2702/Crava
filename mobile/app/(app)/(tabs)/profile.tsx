@@ -11,6 +11,7 @@ import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { useSkillPath } from '../../../lib/useSkillPath'
 import { LanguageToggle } from '../../../components/LanguageToggle'
 import { IconChevronRight } from '../../../components/Icons'
+import { syncReminders } from '../../../lib/reminders'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function Profile() {
@@ -33,8 +34,21 @@ export default function Profile() {
 
   const { user, xp, streak, cleared } = data
 
+  // The stored flag is the user's intent; the OS schedule is rebuilt from it
+  // each time so the two cannot drift. Permission may still be refused, which
+  // leaves the toggle on and nothing scheduled — recoverable from system
+  // settings without the app having lied about the preference.
+  const applyReminders = (enabled: boolean) =>
+    syncReminders({
+      enabled,
+      weeklyGoal: user.weeklyGoal,
+      title: t('Time to train', 'وقت التدريب'),
+      body: t('Your next level is waiting.', 'مستواك التالي في انتظارك.'),
+    }).catch(() => {})
+
   const toggleNotif = async (value: boolean) => {
     if (!authUser) return
+    void applyReminders(value)
     if (isDemo) return void demo.updateUser({ notifEnabled: value })
     try {
       await updateDoc(doc(db(), 'users', authUser.uid), { notifEnabled: value })

@@ -11,6 +11,7 @@ import { demo } from '../../lib/demo'
 import { useAuth } from '../../lib/auth'
 import { useCatalog } from '../../lib/catalog'
 import { useLocale } from '../../lib/i18n'
+import { syncReminders } from '../../lib/reminders'
 import { cardShadow, colors, radius } from '../../theme/tokens'
 
 interface Option {
@@ -96,6 +97,14 @@ export default function Onboarding() {
           { ...answers, onboardedAt: serverTimestamp() },
           { merge: true },
         )
+      // Scheduled from the goal just chosen rather than waiting for the
+      // profile snapshot to come back.
+      void syncReminders({
+        enabled: true,
+        weeklyGoal: answers.weeklyGoal,
+        title: t('Time to train', 'وقت التدريب'),
+        body: t('Your next level is waiting.', 'مستواك التالي في انتظارك.'),
+      }).catch(() => {})
       router.replace('/')
     } catch (e) {
       Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')
