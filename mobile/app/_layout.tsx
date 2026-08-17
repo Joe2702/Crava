@@ -16,6 +16,7 @@ import { LocaleProvider, useLocale } from '../lib/i18n'
 import { CatalogProvider } from '../lib/catalog'
 import { ProfileProvider, useProfile } from '../lib/profile'
 import { CoachRoleProvider } from '../lib/coachRole'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors } from '../theme/tokens'
 
 void SplashScreen.preventAutoHideAsync()
@@ -76,6 +77,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      <ErrorBoundary>
       <StatusBar style="dark" />
       <LocaleProvider>
         <AuthProvider>
@@ -88,6 +90,7 @@ export default function RootLayout() {
           </ProfileProvider>
         </AuthProvider>
       </LocaleProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   )
 }

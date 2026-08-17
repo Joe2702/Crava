@@ -1,43 +1,39 @@
-export const XP_PER_LEVEL = 120
-
 /**
- * XP and streak are derived from level completions rather than stored.
+ * Course progress, expressed the way a course platform expresses it: how much
+ * of the curriculum is done.
  *
- * A stored counter would have to be client-writable on the free tier, which
- * means it could be set to anything. Completions cannot: security rules make
- * them create-only, require the level's drills to be done, and force
- * completedAt to the server clock. Deriving from them leaves nothing to forge.
+ * There is deliberately no XP and no streak. Both were points systems bolted
+ * onto what is really a catalogue of courses, and both pushed the app towards
+ * feeling like a workout tracker rather than somewhere you learn a skill.
  */
-export function xpFrom(completionCount: number): number {
-  return completionCount * XP_PER_LEVEL
+
+export interface CourseProgress {
+  completed: number
+  total: number
+  /** 0..1. Zero when the course has no lessons, rather than NaN. */
+  fraction: number
+  percent: number
+  isComplete: boolean
 }
 
-function dayKey(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(key: string, delta: number): string {
-  return dayKey(new Date(Date.parse(key) + delta * 86_400_000))
-}
-
-/**
- * Consecutive days ending today (or yesterday, so a streak isn't shown as
- * broken until a full day has been missed).
- */
-export function streakFrom(completedAt: Date[], now = new Date()): number {
-  if (completedAt.length === 0) return 0
-
-  const days = new Set(completedAt.map(dayKey))
-  const today = dayKey(now)
-  const yesterday = addDays(today, -1)
-
-  let cursor = days.has(today) ? today : days.has(yesterday) ? yesterday : null
-  if (!cursor) return 0
-
-  let streak = 0
-  while (days.has(cursor)) {
-    streak++
-    cursor = addDays(cursor, -1)
+export function progressOf(completedLessons: number, totalLessons: number): CourseProgress {
+  const total = Math.max(0, totalLessons)
+  const completed = Math.min(Math.max(0, completedLessons), total)
+  const fraction = total === 0 ? 0 : completed / total
+  return {
+    completed,
+    total,
+    fraction,
+    // Floor, so a course is never shown as 100% until it actually is. Rounding
+    // would report 100% at 99.6%, which reads as a bug to the person who can
+    // still see an unfinished lesson.
+    percent: total === 0 ? 0 : Math.floor(fraction * 100),
+    isComplete: total > 0 && completed >= total,
   }
-  return streak
+}
+
+/** The lesson to open when someone taps Continue: the first unfinished one. */
+export function nextLessonIndex(lessonIds: string[], completed: Set<string>): number {
+  const idx = lessonIds.findIndex((id) => !completed.has(id))
+  return idx === -1 ? lessonIds.length - 1 : idx
 }

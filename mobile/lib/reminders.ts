@@ -2,14 +2,14 @@ import { Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
 import { weekdaysForGoal } from './reminderSchedule'
 
-const CHANNEL_ID = 'training-reminders'
+const CHANNEL_ID = 'study-reminders'
 const REMINDER_HOUR = 18
 const REMINDER_MINUTE = 0
 
 async function ensureChannel() {
   if (Platform.OS !== 'android') return
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'Training reminders',
+    name: 'Study reminders',
     importance: Notifications.AndroidImportance.DEFAULT,
   })
 }

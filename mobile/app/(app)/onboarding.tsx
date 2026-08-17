@@ -10,6 +10,7 @@ import { db, isDemo } from '../../lib/firebase'
 import { demo } from '../../lib/demo'
 import { useAuth } from '../../lib/auth'
 import { useCatalog } from '../../lib/catalog'
+import { enroll } from '../../lib/enrollment'
 import { useLocale } from '../../lib/i18n'
 import { syncReminders } from '../../lib/reminders'
 import { cardShadow, colors, radius } from '../../theme/tokens'
@@ -22,52 +23,35 @@ interface Option {
 
 export default function Onboarding() {
   const { user } = useAuth()
-  const { skills, activeSkillId, setActiveSkillId } = useCatalog()
+  const { courses } = useCatalog()
   const { t, field } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
 
   const [step, setStep] = useState(0)
-  const [level, setLevel] = useState<string | null>(null)
+  const [courseId, setCourseId] = useState<string | null>(null)
   const [goal, setGoal] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // The design promises "start at level 3" for people who are already past the
-  // basics. Granting the earlier levels would mean awarding XP for work not
-  // done, which the security rules rightly forbid, so this only moves where the
-  // path begins — the skipped levels stay open and stay unearned.
-  const STARTS: Record<string, number> = { new: 1, some: 3, adv: 5 }
   const GOALS: Record<string, number> = { '2': 2, '4': 4, '6': 6 }
 
   const steps: { kicker: string; title: string; sub: string; opts: Option[]; value: string | null; pick: (id: string) => void }[] = [
     {
-      kicker: t('Step 1 of 3', 'الخطوة ١ من ٣'),
-      title: t('Master the move', 'اتقن الحركة'),
-      sub: t('Pick the skill you want first. You can add more later.', 'اختر المهارة التي تريدها أولاً. يمكنك إضافة المزيد لاحقاً.'),
-      opts: skills.map((s) => ({
-        id: s.id,
-        title: field(s, 'name'),
-        meta: t(`${s.category_en} · 6 levels`, `${s.category_ar} · ٦ مستويات`),
+      kicker: t('Step 1 of 2', 'الخطوة ١ من ٢'),
+      title: t('What do you want to learn?', 'ماذا تريد أن تتعلم؟'),
+      sub: t('Pick a course to start with. You can take others later.', 'اختر دورة للبدء. يمكنك أخذ غيرها لاحقاً.'),
+      opts: courses.map((c) => ({
+        id: c.id,
+        title: field(c, 'name'),
+        meta: t(`${c.category_en} · 6 lessons`, `${c.category_ar} · ٦ دروس`),
       })),
-      value: activeSkillId,
-      pick: setActiveSkillId,
+      value: courseId,
+      pick: setCourseId,
     },
     {
-      kicker: t('Step 2 of 3', 'الخطوة ٢ من ٣'),
-      title: t('Where are you now?', 'أين أنت الآن؟'),
-      sub: t('We start you at the right level so nothing is wasted.', 'نبدأ معك من المستوى المناسب حتى لا يضيع وقتك.'),
-      opts: [
-        { id: 'new', title: t('Never trained', 'لم أتدرب من قبل'), meta: t('Start at level 1', 'ابدأ من المستوى ١') },
-        { id: 'some', title: t('I can do pull-ups', 'أستطيع أداء العقلة'), meta: t('Start at level 3', 'ابدأ من المستوى ٣') },
-        { id: 'adv', title: t('Advanced', 'متقدم'), meta: t('Skip to the transition work', 'انتقل إلى تمارين الانتقال') },
-      ],
-      value: level,
-      pick: setLevel,
-    },
-    {
-      kicker: t('Step 3 of 3', 'الخطوة ٣ من ٣'),
-      title: t('How often?', 'كم مرة أسبوعياً؟'),
-      sub: t('Your streak and reminders follow this.', 'سلسلة أيامك والتذكيرات تتبع هذا الاختيار.'),
+      kicker: t('Step 2 of 2', 'الخطوة ٢ من ٢'),
+      title: t('How often will you study?', 'كم مرة ستدرس؟'),
+      sub: t('We will remind you on those days.', 'سنذكرك في تلك الأيام.'),
       opts: [
         { id: '2', title: t('2 days a week', 'يومان أسبوعياً'), meta: t('Light', 'خفيف') },
         { id: '4', title: t('4 days a week', '٤ أيام أسبوعياً'), meta: t('Recommended', 'موصى به') },
@@ -85,10 +69,7 @@ export default function Onboarding() {
     setSaving(true)
     // Skipping still marks the user onboarded — the screen must not reappear
     // every launch — it just leaves the answers unset.
-    const answers = {
-      startLevelIdx: skipped || !level ? null : STARTS[level],
-      weeklyGoal: skipped || !goal ? null : GOALS[goal],
-    }
+    const answers = { weeklyGoal: skipped || !goal ? null : GOALS[goal] }
     try {
       if (isDemo) demo.updateUser({ ...answers, onboardedAt: Date.now() })
       else
@@ -102,9 +83,12 @@ export default function Onboarding() {
       void syncReminders({
         enabled: true,
         weeklyGoal: answers.weeklyGoal,
-        title: t('Time to train', 'وقت التدريب'),
-        body: t('Your next level is waiting.', 'مستواك التالي في انتظارك.'),
+        title: t('Time to study', 'وقت الدراسة'),
+        body: t('Your next lesson is waiting.', 'درسك التالي في انتظارك.'),
       }).catch(() => {})
+      // Picking a course in step 1 is an enrolment — otherwise My learning is
+      // empty the moment onboarding finishes, which is the wrong first screen.
+      if (!skipped && courseId) await enroll(user.uid, courseId).catch(() => {})
       router.replace('/')
     } catch (e) {
       Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')
@@ -119,7 +103,7 @@ export default function Onboarding() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ flexDirection: 'row', gap: 6 }}>
-          {[0, 1, 2].map((i) => (
+          {[0, 1].map((i) => (
             <View
               key={i}
               style={{
@@ -185,10 +169,10 @@ export default function Onboarding() {
 
       <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 16, gap: 6 }}>
         <PrimaryButton
-          label={step < 2 ? t('Continue', 'متابعة') : t('Start training', 'ابدأ التدريب')}
+          label={step < 1 ? t('Continue', 'متابعة') : t('Start learning', 'ابدأ التعلم')}
           disabled={!current.value}
           busy={saving}
-          onPress={() => (step < 2 ? setStep(step + 1) : void finish(false))}
+          onPress={() => (step < 1 ? setStep(step + 1) : void finish(false))}
         />
         <Pressable onPress={() => void finish(true)} accessibilityRole="button" disabled={saving}>
           <Txt style={{ textAlign: 'center', padding: 12, fontSize: 15, color: colors.textSecondary }}>

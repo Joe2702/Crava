@@ -4,13 +4,12 @@ import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { BottomTabBarProps } from 'expo-router/tabs'
 import { Txt } from './Txt'
-import { IconCoaches, IconHome, IconSearch, IconTrain, IconUser } from './Icons'
+import { IconCoaches, IconHome, IconSearch, IconUser } from './Icons'
 import { colors, radius } from '../theme/tokens'
 
 const ICONS: Record<string, (p: { color: string }) => ReactElement> = {
   index: ({ color }) => <IconHome color={color} />,
   search: ({ color }) => <IconSearch size={23} color={color} />,
-  tree: ({ color }) => <IconTrain color={color} />,
   coaches: ({ color }) => <IconCoaches color={color} />,
   profile: ({ color }) => <IconUser color={color} />,
 }

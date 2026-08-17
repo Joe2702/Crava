@@ -134,6 +134,7 @@ interface DemoState {
   user: UserDoc
   drillCompletions: Set<string>
   levelCompletions: Map<string, Date>
+  enrollments: Map<string, Date>
 }
 
 function freshUser(displayName = 'Yassin'): UserDoc {
@@ -143,7 +144,6 @@ function freshUser(displayName = 'Yassin'): UserDoc {
     city: null,
     notifEnabled: true,
     onboardedAt: null,
-    startLevelIdx: null,
     weeklyGoal: null,
     createdAt: Date.now(),
     entitlement: null,
@@ -155,6 +155,7 @@ const state: DemoState = {
   user: freshUser(),
   drillCompletions: new Set(),
   levelCompletions: new Map(),
+  enrollments: new Map(),
 }
 
 type Listener = () => void
@@ -189,6 +190,20 @@ export const demo = {
     state.user = freshUser()
     state.drillCompletions.clear()
     state.levelCompletions.clear()
+    state.enrollments.clear()
+    emit()
+  },
+  enrollments() {
+    return [...state.enrollments.entries()]
+      .map(([courseId, enrolledAt]) => ({ courseId, enrolledAt }))
+      .sort((a, b) => b.enrolledAt.getTime() - a.enrolledAt.getTime())
+  },
+  enroll(courseId: string) {
+    if (!state.enrollments.has(courseId)) state.enrollments.set(courseId, new Date())
+    emit()
+  },
+  unenroll(courseId: string) {
+    state.enrollments.delete(courseId)
     emit()
   },
   updateUser(patch: Partial<UserDoc>) {

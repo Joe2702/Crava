@@ -64,20 +64,20 @@ service cloud.firestore {
                                    'startLevelIdx', 'weeklyGoal']);
       allow delete: if isOwner(uid);
 
-      // Ticking a drill grants nothing by itself; it is only an input to the
-      // level-completion check below.
+      // Which courses the learner has started. Account state rather than a
+      // device preference, so My learning follows them to a new phone.
+      match /enrollments/{courseId} {
+        allow read, create, delete: if isOwner(uid);
+        allow update: if false;
+      }
+
+      // Ticking a step grants nothing by itself; it is only an input to the
+      // lesson-completion check below.
       match /drillCompletions/{drillId} {
         allow read, create, delete: if isOwner(uid);
         allow update: if false;
       }
 
-      // Blocking is a store requirement for user content. It is per-user and
-      // applied when the feed is read, so a block takes effect immediately
-      // without touching anyone else's data.
-      match /blocked/{blockedUid} {
-        allow read, create, delete: if isOwner(uid);
-        allow update: if false;
-      }
 
       // The earning event. Create-only, so a level can be cleared exactly once
       // and never re-awarded. completedAt must be the server's clock, which
@@ -117,8 +117,8 @@ service cloud.firestore {
       }
     }
 
-    // Anyone signed in can apply to coach. Write-only from the client, like
-    // reports: an applicant cannot read the queue or change a decision.
+    // Anyone signed in can apply to coach. Write-only from the client: an
+    // applicant cannot read the queue back or change a decision.
     match /coachApplications/{uid} {
       allow create: if isOwner(uid)
                     && request.resource.data.createdAt == request.time;
@@ -157,44 +157,6 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                     && request.resource.data.status in ['confirmed', 'declined'];
       allow delete: if signedIn() && resource.data.userUid == request.auth.uid;
-    }
-
-    // ---- community ----
-
-    // Posts carry no counter. A like count stored on the document would have to
-    // be client-incrementable, and rules cannot tell an increment that
-    // accompanies a like from one that does not, so it could be inflated
-    // freely. The count is read with an aggregation query over likes/ instead,
-    // which the client cannot forge.
-    match /posts/{postId} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-                    && request.resource.data.authorUid == request.auth.uid
-                    && request.resource.data.keys().hasOnly(
-                         ['authorUid', 'authorName', 'body', 'skillId', 'createdAt'])
-                    && request.resource.data.body is string
-                    && request.resource.data.body.size() > 0
-                    && request.resource.data.body.size() <= 500
-                    && request.resource.data.createdAt == request.time;
-      // Edits are not offered, and allowing them would let a post be rewritten
-      // after it was liked or reported.
-      allow update: if false;
-      allow delete: if signedIn() && resource.data.authorUid == request.auth.uid;
-
-      match /likes/{uid} {
-        allow read: if signedIn();
-        allow create, delete: if isOwner(uid);
-        allow update: if false;
-      }
-    }
-
-    // Write-only from the client: anyone signed in can report, nobody can read
-    // the reports back or tamper with one already filed.
-    match /reports/{reportId} {
-      allow create: if signedIn()
-                    && request.resource.data.reporterUid == request.auth.uid
-                    && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if false;
     }
 
     match /{document=**} {

@@ -48,7 +48,6 @@ async function ensureUserDoc(user: User, displayName?: string) {
       city: null,
       notifEnabled: true,
       onboardedAt: null,
-      startLevelIdx: null,
       weeklyGoal: null,
       createdAt: serverTimestamp(),
       entitlement: null,
@@ -62,7 +61,7 @@ async function ensureUserDoc(user: User, displayName?: string) {
  * outlive the account without this.
  */
 async function deleteOwnData(uid: string) {
-  for (const sub of ['drillCompletions', 'levelCompletions']) {
+  for (const sub of ['drillCompletions', 'levelCompletions', 'enrollments']) {
     const snap = await getDocs(collection(db(), 'users', uid, sub))
     await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)))
   }

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { canOpenLevel, isSubscribed, type Entitlement } from './entitlement.ts'
+import { canOpenLesson, isSubscribed, type Entitlement } from './entitlement.ts'
 
 const NOW = Date.UTC(2026, 0, 15)
 const ent = (over: Partial<NonNullable<Entitlement>>): Entitlement => ({
@@ -35,11 +35,11 @@ test('a null expiry never expires, for promos and comped accounts', () => {
   assert.equal(isSubscribed(ent({ expiresAt: null }), NOW), true)
 })
 
-test('level 1 is free without any entitlement', () => {
-  assert.equal(canOpenLevel(1, null, NOW), true)
+test('lesson 1 is free without any entitlement', () => {
+  assert.equal(canOpenLesson(1, null, NOW), true)
 })
 
-test('levels past the first need a subscription', () => {
-  assert.equal(canOpenLevel(2, null, NOW), false)
-  assert.equal(canOpenLevel(6, ent({}), NOW), true)
+test('lessons past the first need a subscription', () => {
+  assert.equal(canOpenLesson(2, null, NOW), false)
+  assert.equal(canOpenLesson(6, ent({}), NOW), true)
 })

@@ -1,35 +1,44 @@
+import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import assert from 'node:assert/strict'
-import { streakFrom, xpFrom } from './progress.ts'
+import { nextLessonIndex, progressOf } from './progress.ts'
 
-const day = (iso: string) => new Date(`${iso}T12:00:00Z`)
-const NOW = day('2026-03-10')
-
-test('xp is a flat multiple of completions', () => {
-  assert.equal(xpFrom(0), 0)
-  assert.equal(xpFrom(3), 360)
+test('an empty course is 0% rather than NaN', () => {
+  const p = progressOf(0, 0)
+  assert.equal(p.percent, 0)
+  assert.equal(p.fraction, 0)
+  assert.equal(p.isComplete, false)
 })
 
-test('no completions means no streak', () => {
-  assert.equal(streakFrom([], NOW), 0)
+test('percent floors, so 100% means finished', () => {
+  // 249 of 250 is 99.6%, which must not round up to 100.
+  assert.equal(progressOf(249, 250).percent, 99)
+  assert.equal(progressOf(250, 250).percent, 100)
 })
 
-test('counts consecutive days ending today', () => {
-  assert.equal(streakFrom([day('2026-03-08'), day('2026-03-09'), day('2026-03-10')], NOW), 3)
+test('completion beyond the total is clamped', () => {
+  const p = progressOf(9, 6)
+  assert.equal(p.completed, 6)
+  assert.equal(p.percent, 100)
+  assert.equal(p.isComplete, true)
 })
 
-test('a gap ends the streak', () => {
-  assert.equal(streakFrom([day('2026-03-06'), day('2026-03-09'), day('2026-03-10')], NOW), 2)
+test('negative input cannot produce a negative bar', () => {
+  assert.equal(progressOf(-3, 6).percent, 0)
+  assert.equal(progressOf(3, -6).total, 0)
 })
 
-test('yesterday still counts so a streak is not lost mid-day', () => {
-  assert.equal(streakFrom([day('2026-03-08'), day('2026-03-09')], NOW), 2)
+test('continue opens the first unfinished lesson', () => {
+  const ids = ['a-1', 'a-2', 'a-3']
+  assert.equal(nextLessonIndex(ids, new Set(['a-1'])), 1)
+  assert.equal(nextLessonIndex(ids, new Set()), 0)
 })
 
-test('older than yesterday is a broken streak', () => {
-  assert.equal(streakFrom([day('2026-03-07'), day('2026-03-08')], NOW), 0)
+test('a gap in the middle is where continue goes, not the end', () => {
+  const ids = ['a-1', 'a-2', 'a-3']
+  assert.equal(nextLessonIndex(ids, new Set(['a-1', 'a-3'])), 1)
 })
 
-test('several completions on one day count once', () => {
-  assert.equal(streakFrom([day('2026-03-10'), day('2026-03-10'), day('2026-03-09')], NOW), 2)
+test('a finished course keeps continue on the last lesson', () => {
+  const ids = ['a-1', 'a-2']
+  assert.equal(nextLessonIndex(ids, new Set(ids)), 1)
 })

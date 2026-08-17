@@ -3,9 +3,18 @@
 Firestore for data and Firebase Auth for accounts. **Everything runs on the free
 Spark plan** — no Cloud Functions and no billing account required.
 
+## Vocabulary
+
+The product says **Course**, **Lesson** and **Step**. Firestore still stores them
+in `skills`, `levels` and `drills`. Renaming the collections would orphan every
+completion already recorded against a level id, which is not worth it for a
+vocabulary change — so the mapping lives in `mobile/lib/types.ts` and nowhere
+else.
+
 ## How progress stays honest without a server
 
-XP and streak are **not stored**. They are computed from `levelCompletions`.
+Progress is **not stored**. It is computed from `levelCompletions`: a course is
+`completed / total` lessons.
 
 A stored counter would have to be client-writable on the free tier, which means
 it could be set to any value. A completion cannot be forged the same way,
@@ -15,12 +24,11 @@ because security rules make creating one conditional:
 - the level must exist and be published
 - the level's three required drills must already be ticked
 - `completedAt` must equal `request.time`, the server's clock, so completions
-  cannot be backdated to manufacture a streak
+  cannot be backdated
 
-XP is then `completions × 120` and the streak is derived from the completion
-dates. There is no number left to tamper with.
+There is no number left to tamper with.
 
-Ticking a drill *is* client-writable, since on its own it grants nothing — it is
+Ticking a step *is* client-writable, since on its own it grants nothing — it is
 only an input to the rule above. Note this was equally true of the Cloud
 Function version: it also trusted client-written drill ticks.
 
@@ -64,6 +72,7 @@ levels/{levelId}                     { skillId, idx, ... }
 drills/{drillId}                     { levelId, idx, isRequired, ... }
 levelVideos/{levelId}                playback ids, unreadable by any client
 users/{uid}                          profile + entitlement (no stored progress)
+users/{uid}/enrollments/{courseId}   the My learning list
 users/{uid}/drillCompletions/{id}    client-writable; grants nothing alone
 users/{uid}/levelCompletions/{id}    create-only, gated by the rules above
 ```

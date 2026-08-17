@@ -7,8 +7,8 @@ import { doc, updateDoc } from 'firebase/firestore'
 import { db, isDemo } from '../../../lib/firebase'
 import { demo } from '../../../lib/demo'
 import { useAuth } from '../../../lib/auth'
-import { localizeNumber, useLocale } from '../../../lib/i18n'
-import { useSkillPath } from '../../../lib/useSkillPath'
+import { useProfile } from '../../../lib/profile'
+import { useLocale } from '../../../lib/i18n'
 import { LanguageToggle } from '../../../components/LanguageToggle'
 import { IconChevronRight } from '../../../components/Icons'
 import { syncReminders } from '../../../lib/reminders'
@@ -16,25 +16,25 @@ import { useCoachRole } from '../../../lib/coachRole'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function Profile() {
-  const { data, loading, reload } = useSkillPath()
   const { signOut, deleteAccount, user: authUser } = useAuth()
-  const { t, locale } = useLocale()
+  const { t } = useLocale()
   const { coach } = useCoachRole()
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
 
-  const n = (v: number) => localizeNumber(v, locale)
+  // The profile document is the only thing this screen needs, and it is already
+  // watched live app-wide. Loading the whole course path here duplicated those
+  // reads to render a stats row that no longer exists.
+  const { profile, ready } = useProfile()
 
-  if (loading || !data) {
+  if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator color={colors.accent} />
       </View>
     )
   }
-
-  const { user, xp, streak, cleared } = data
 
   // The stored flag is the user's intent; the OS schedule is rebuilt from it
   // each time so the two cannot drift. Permission may still be refused, which
@@ -43,9 +43,9 @@ export default function Profile() {
   const applyReminders = (enabled: boolean) =>
     syncReminders({
       enabled,
-      weeklyGoal: user.weeklyGoal,
-      title: t('Time to train', 'وقت التدريب'),
-      body: t('Your next level is waiting.', 'مستواك التالي في انتظارك.'),
+      weeklyGoal: profile?.weeklyGoal ?? null,
+      title: t('Time to study', 'وقت الدراسة'),
+      body: t('Your next lesson is waiting.', 'درسك التالي في انتظارك.'),
     }).catch(() => {})
 
   const toggleNotif = async (value: boolean) => {
@@ -54,7 +54,6 @@ export default function Profile() {
     if (isDemo) return void demo.updateUser({ notifEnabled: value })
     try {
       await updateDoc(doc(db(), 'users', authUser.uid), { notifEnabled: value })
-      void reload()
     } catch (e) {
       Alert.alert(t('Could not save', 'تعذر الحفظ'), e instanceof Error ? e.message : '')
     }
@@ -86,28 +85,15 @@ export default function Profile() {
       ],
     )
   }
-
-  const stat = (value: string, label: string) => (
-    <View key={label} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, ...cardShadow }}>
-      <Txt style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.8, color: colors.text }}>{value}</Txt>
-      <Txt style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>{label}</Txt>
-    </View>
-  )
-
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32, gap: 16 }}
     >
       <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
-        {user.displayName || t('Athlete', 'بطل')}
+        {profile?.displayName || authUser?.displayName || t('Learner', 'متعلم')}
       </Txt>
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {stat(n(cleared), t('Levels', 'مستويات'))}
-        {stat(n(streak), t('Day streak', 'يوم متتالي'))}
-        {stat(n(xp), 'XP')}
-      </View>
 
       {/* Coaching only appears for accounts an admin has linked to a coach
           profile — the same account learns and coaches, like an instructor on a
@@ -130,9 +116,7 @@ export default function Profile() {
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
         <LinkRow label={t('Edit profile', 'تعديل الملف')} onPress={() => router.push('/edit-profile')} />
-        <LinkRow label={t('Achievements', 'الإنجازات')} onPress={() => router.push('/achievements')} />
-        <LinkRow label={t('My sessions', 'جلساتي')} onPress={() => router.push('/sessions')} />
-        <LinkRow label={t('Milestones', 'الإنجازات العامة')} onPress={() => router.push('/community')} />
+        <LinkRow label={t('My sessions', 'جلساتي')} onPress={() => router.push('/sessions')} last />
       </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
@@ -159,9 +143,9 @@ export default function Profile() {
             borderBottomColor: colors.separator,
           }}
         >
-          <Txt style={{ fontSize: 16, color: colors.text }}>{t('Notifications', 'الإشعارات')}</Txt>
+          <Txt style={{ fontSize: 16, color: colors.text }}>{t('Study reminders', 'تذكيرات الدراسة')}</Txt>
           <Switch
-            value={user.notifEnabled}
+            value={profile?.notifEnabled ?? true}
             onValueChange={toggleNotif}
             trackColor={{ true: colors.success, false: 'rgba(118,118,128,0.24)' }}
             accessibilityLabel={t('Notifications', 'الإشعارات')}

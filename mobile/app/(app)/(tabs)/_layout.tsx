@@ -14,11 +14,10 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: t('Home', 'الرئيسية') }} />
-      <Tabs.Screen name="search" options={{ title: t('Browse', 'تصفح') }} />
-      <Tabs.Screen name="tree" options={{ title: t('Train', 'تدرب') }} />
-      <Tabs.Screen name="coaches" options={{ title: t('Coaches', 'المدربون') }} />
-      <Tabs.Screen name="profile" options={{ title: t('You', 'حسابي') }} />
+      <Tabs.Screen name="index" options={{ title: t('Learning', 'تعلّمي') }} />
+      <Tabs.Screen name="search" options={{ title: t('Courses', 'الدورات') }} />
+      <Tabs.Screen name="coaches" options={{ title: t('Coaching', 'التدريب') }} />
+      <Tabs.Screen name="profile" options={{ title: t('Account', 'حسابي') }} />
     </Tabs>
   )
 }

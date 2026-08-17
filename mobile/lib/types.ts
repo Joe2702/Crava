@@ -1,4 +1,10 @@
-export interface Skill {
+/**
+ * The product calls these Courses and Lessons; Firestore still stores them in
+ * `skills`, `levels` and `drills`. Renaming the collections would orphan every
+ * completion already recorded against a level id, which is not worth it for a
+ * vocabulary change — so the mapping is stated here and kept in one place.
+ */
+export interface Course {
   id: string
   name_en: string
   name_ar: string
@@ -10,8 +16,9 @@ export interface Skill {
   isPublished: boolean
 }
 
-export interface Level {
+export interface Lesson {
   id: string
+  /** Storage field name; this is the course id. */
   skillId: string
   idx: number
   name_en: string
@@ -23,8 +30,10 @@ export interface Level {
   isPublished: boolean
 }
 
-export interface Drill {
+/** A step inside a lesson: watch, warm up, practise. */
+export interface Step {
   id: string
+  /** Storage field name; this is the lesson id. */
   levelId: string
   idx: number
   name_en: string
@@ -45,13 +54,7 @@ export interface UserDoc {
   city: string | null
   notifEnabled: boolean
   onboardedAt: number | null
-  /**
-   * Where the path begins for this user. Onboarding lets people say they are
-   * already past the basics; this moves the starting point without marking the
-   * skipped levels complete, so no XP is granted for work not done.
-   */
-  startLevelIdx: number | null
-  /** Sessions per week the user committed to. Drives reminders. */
+  /** Study sessions per week the learner committed to. Drives reminders. */
   weeklyGoal: number | null
   createdAt: number
   entitlement: {
@@ -61,3 +64,5 @@ export interface UserDoc {
     expiresAt: number | null
   } | null
 }
+
+export type { Course as Skill, Lesson as Level, Step as Drill }

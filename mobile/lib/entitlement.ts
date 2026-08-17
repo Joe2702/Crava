@@ -1,7 +1,7 @@
 import type { UserDoc } from './types'
 
-/** Level 1 of every skill is free; the rest need an active subscription. */
-export const FREE_LEVEL_IDX = 1
+/** Lesson 1 of every course is free; the rest need an active subscription. */
+export const FREE_LESSON_IDX = 1
 
 export type Entitlement = UserDoc['entitlement']
 
@@ -14,6 +14,6 @@ export function isSubscribed(entitlement: Entitlement, now = Date.now()): boolea
   return entitlement.expiresAt === null || entitlement.expiresAt > now
 }
 
-export function canOpenLevel(levelIdx: number, entitlement: Entitlement, now = Date.now()): boolean {
-  return levelIdx <= FREE_LEVEL_IDX || isSubscribed(entitlement, now)
+export function canOpenLesson(lessonIdx: number, entitlement: Entitlement, now = Date.now()): boolean {
+  return lessonIdx <= FREE_LESSON_IDX || isSubscribed(entitlement, now)
 }

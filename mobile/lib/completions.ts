@@ -1,31 +1,5 @@
 import { collection, getDocs, query, where, type Timestamp } from 'firebase/firestore'
-import { db, isDemo } from './firebase'
-import { demo } from './demo'
-
-export interface CompletionSet {
-  levelIds: string[]
-  dates: Date[]
-}
-
-/**
- * Every cleared level across every skill, which is what achievements are
- * measured against — unlike the path screens, which are scoped to one skill.
- */
-export async function fetchAllCompletions(uid: string): Promise<CompletionSet> {
-  if (isDemo) {
-    const map = demo.levelCompletions()
-    return { levelIds: [...map.keys()], dates: [...map.values()] }
-  }
-  const snap = await getDocs(collection(db(), 'users', uid, 'levelCompletions'))
-  const levelIds: string[] = []
-  const dates: Date[] = []
-  for (const d of snap.docs) {
-    levelIds.push(d.id)
-    const at = (d.data().completedAt as Timestamp | null)?.toDate()
-    if (at) dates.push(at)
-  }
-  return { levelIds, dates }
-}
+import { db } from './firebase'
 
 export interface BookingRow {
   id: string
