@@ -122,6 +122,38 @@ GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json npm run seed
 Writes 1 skill, 6 levels and 24 drills. Safe to re-run — ids are deterministic,
 so it updates in place rather than duplicating.
 
+## Coaches
+
+A coach is a normal user account with a coach profile linked to it, so the same
+login both learns and coaches — the arrangement an instructor on a course
+platform has.
+
+Linking is deliberately an admin step, not something the app can do. The rules
+never let a client write `ownerUid`, because "verified coach" has to mean a
+person checked. Someone applies from **You → Coach on Crava**, which writes to
+`coachApplications/{uid}` (write-only from the client — an applicant cannot read
+the queue or change a decision). You read that collection in the console, and
+then link them:
+
+```bash
+cd firebase/seed
+GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json \
+  node link-coach.mjs omar someone@example.com
+```
+
+Pass an empty email to unlink. The account has to exist — they sign up in the
+app first.
+
+Once linked, **You** grows a Coaching section: incoming requests to accept or
+decline, and their own listing (bio and rate). A coach cannot edit their own
+name, skill or verified status, and cannot publish themselves.
+
+`bookings` carries `coachOwnerUid` alongside `coachId`. That duplication is
+deliberate: both sides need to list their own rows, and a rule that reached the
+owner through the coach document with `get()` could not be evaluated for a list
+query. Create checks the denormalised value against the coach document, so it
+cannot be pointed at somebody else.
+
 ## Video
 
 Videos are **streamed from Cloudflare Stream**, not bundled into the app. Six

@@ -95,9 +95,21 @@ service cloud.firestore {
 
     // ---- coaches marketplace ----
 
+    // A coach profile is owned by a normal user account — the same account can
+    // learn and coach, like an instructor on a course platform. ownerUid is null
+    // until the profile is claimed, and only an admin sets it, because
+    // "verified coach" has to mean somebody checked.
     match /coaches/{coachId} {
-      allow read: if signedIn() && resource.data.isPublished == true;
-      allow write: if false;
+      allow read: if signedIn()
+                  && (resource.data.isPublished == true || resource.data.ownerUid == request.auth.uid);
+      // The owner may edit their own presentation, and nothing else. Notably
+      // not isPublished or ownerUid, so a coach can neither publish themselves
+      // nor hand the profile to someone else.
+      allow update: if signedIn()
+                    && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['bio_en', 'bio_ar', 'city_en', 'city_ar', 'rateEgp']);
+      allow create, delete: if false;
 
       match /slots/{slotId} {
         allow read: if signedIn();
@@ -105,21 +117,45 @@ service cloud.firestore {
       }
     }
 
+    // Anyone signed in can apply to coach. Write-only from the client, like
+    // reports: an applicant cannot read the queue or change a decision.
+    match /coachApplications/{uid} {
+      allow create: if isOwner(uid)
+                    && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
     // A booking is a request, not a confirmation, so two people asking for the
     // same slot is not a conflict to resolve here — the coach confirms one.
     // No price is stored: a client-supplied figure could not be trusted, and
     // the coach's rate is already on the coach document.
+    //
+    // coachOwnerUid is denormalised onto the booking so both sides can query
+    // their own rows with a filter Firestore can prove. Deriving it through the
+    // coach document instead would need a get() the rules engine cannot
+    // evaluate for a list query, and rules are not filters. It cannot be forged
+    // because create checks it against the coach document.
     match /bookings/{bookingId} {
-      allow read: if signedIn() && resource.data.userUid == request.auth.uid;
+      allow read: if signedIn()
+                  && (resource.data.userUid == request.auth.uid
+                      || resource.data.coachOwnerUid == request.auth.uid);
       allow create: if signedIn()
                     && request.resource.data.userUid == request.auth.uid
                     && request.resource.data.status == 'requested'
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.keys().hasOnly(
-                         ['userUid', 'coachId', 'slotId', 'sessionType', 'status', 'createdAt'])
-                    && request.resource.data.sessionType in ['form', 'live'];
-      // Status is the coach's to change, not the requester's.
-      allow update: if false;
+                         ['userUid', 'coachId', 'coachOwnerUid', 'slotId', 'sessionType',
+                          'status', 'createdAt'])
+                    && request.resource.data.sessionType in ['form', 'live']
+                    && request.resource.data.coachOwnerUid ==
+                         get(/databases/$(database)/documents/coaches/$(request.resource.data.coachId))
+                           .data.ownerUid;
+      // Only the coach decides, and only the status moves. The requester cannot
+      // confirm their own booking.
+      allow update: if signedIn()
+                    && resource.data.coachOwnerUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                    && request.resource.data.status in ['confirmed', 'declined'];
       allow delete: if signedIn() && resource.data.userUid == request.auth.uid;
     }
 

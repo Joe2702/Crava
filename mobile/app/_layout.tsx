@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from '../lib/auth'
 import { LocaleProvider, useLocale } from '../lib/i18n'
 import { CatalogProvider } from '../lib/catalog'
 import { ProfileProvider, useProfile } from '../lib/profile'
+import { CoachRoleProvider } from '../lib/coachRole'
 import { colors } from '../theme/tokens'
 
 void SplashScreen.preventAutoHideAsync()
@@ -80,7 +81,9 @@ export default function RootLayout() {
         <AuthProvider>
           <ProfileProvider>
             <CatalogProvider>
-              <AuthGate />
+              <CoachRoleProvider>
+                <AuthGate />
+              </CoachRoleProvider>
             </CatalogProvider>
           </ProfileProvider>
         </AuthProvider>

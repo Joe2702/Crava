@@ -155,8 +155,26 @@ for (const [order, { levels, ...skill }] of SKILLS.entries()) {
   }
 }
 
+// merge:true keeps fields the payload omits, but still overwrites the ones it
+// names — so ownerUid and the bio can only be initialised on documents that do
+// not exist yet. Including them unconditionally would hand every coach profile
+// back to nobody, and erase their bio, on every re-seed.
+const existingCoaches = await db.getAll(...COACHES.map((c) => db.collection('coaches').doc(c.id)))
+const isNewCoach = new Map(existingCoaches.map((d) => [d.id, !d.exists]))
+
 for (const [order, coach] of COACHES.entries()) {
-  batch.set(db.collection('coaches').doc(coach.id), { ...coach, sortOrder: order, isPublished: true })
+  batch.set(
+    db.collection('coaches').doc(coach.id),
+    {
+      ...coach,
+      sortOrder: order,
+      isPublished: true,
+      // ownerUid stays null until an admin links the profile to a real
+      // account, because "verified coach" has to mean somebody checked.
+      ...(isNewCoach.get(coach.id) ? { ownerUid: null, bio_en: '', bio_ar: '' } : {}),
+    },
+    { merge: true },
+  )
   for (const [i, [dayEn, dayAr, time]] of SLOTS.entries()) {
     batch.set(db.collection('coaches').doc(coach.id).collection('slots').doc(`${coach.id}-${i}`), {
       idx: i,

@@ -50,7 +50,13 @@ export default function Booking() {
     if (!user || !coach || !slotId) return
     setSending(true)
     try {
-      await requestBooking({ uid: user.uid, coachId: coach.id, slotId, sessionType })
+      await requestBooking({
+        uid: user.uid,
+        coachId: coach.id,
+        coachOwnerUid: coach.ownerUid ?? null,
+        slotId,
+        sessionType,
+      })
       setRequested(true)
     } catch (e) {
       Alert.alert(t('Could not request', 'تعذر الحجز'), e instanceof Error ? e.message : '')

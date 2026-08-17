@@ -8,10 +8,14 @@ export interface Coach {
   skillId: string
   city_en: string
   city_ar: string
+  bio_en?: string
+  bio_ar?: string
   rating: number
   rateEgp: number
   sortOrder: number
   isPublished: boolean
+  /** The account that owns this profile, or null while unclaimed. */
+  ownerUid: string | null
 }
 
 export interface Slot {
@@ -56,12 +60,17 @@ export async function fetchCoach(coachId: string): Promise<{ coach: Coach; slots
 export async function requestBooking(input: {
   uid: string
   coachId: string
+  coachOwnerUid: string | null
   slotId: string
   sessionType: SessionType
 }) {
   await addDoc(collection(db(), 'bookings'), {
     userUid: input.uid,
     coachId: input.coachId,
+    // Denormalised so the coach can query the requests sent to them with a
+    // filter the rules can prove. Create is checked against the coach document,
+    // so this cannot be pointed at someone else.
+    coachOwnerUid: input.coachOwnerUid,
     slotId: input.slotId,
     sessionType: input.sessionType,
     status: 'requested',

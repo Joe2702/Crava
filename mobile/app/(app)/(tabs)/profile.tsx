@@ -12,12 +12,14 @@ import { useSkillPath } from '../../../lib/useSkillPath'
 import { LanguageToggle } from '../../../components/LanguageToggle'
 import { IconChevronRight } from '../../../components/Icons'
 import { syncReminders } from '../../../lib/reminders'
+import { useCoachRole } from '../../../lib/coachRole'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function Profile() {
   const { data, loading, reload } = useSkillPath()
   const { signOut, deleteAccount, user: authUser } = useAuth()
   const { t, locale } = useLocale()
+  const { coach } = useCoachRole()
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -106,6 +108,25 @@ export default function Profile() {
         {stat(n(streak), t('Day streak', 'يوم متتالي'))}
         {stat(n(xp), 'XP')}
       </View>
+
+      {/* Coaching only appears for accounts an admin has linked to a coach
+          profile — the same account learns and coaches, like an instructor on a
+          course platform. Everyone else is offered the way in. */}
+      {coach ? (
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 }}>
+            <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.accentDark }}>
+              {t('Coaching', 'التدريب')}
+            </Txt>
+          </View>
+          <LinkRow label={t('Requests', 'الطلبات')} onPress={() => router.push('/coach/requests')} />
+          <LinkRow label={t('Your listing', 'ملفك كمدرب')} onPress={() => router.push('/coach/profile')} last />
+        </View>
+      ) : (
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
+          <LinkRow label={t('Coach on Crava', 'درّب على كرافا')} onPress={() => router.push('/coach/apply')} last />
+        </View>
+      )}
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
         <LinkRow label={t('Edit profile', 'تعديل الملف')} onPress={() => router.push('/edit-profile')} />
