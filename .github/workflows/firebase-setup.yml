@@ -89,7 +89,7 @@ jobs:
             exit $code
           fi
 
-      - name: Seed lesson content
+      - name: Seed course content
         if: inputs.seed
         working-directory: firebase/seed
         env:
@@ -109,7 +109,7 @@ jobs:
             echo
             echo "Project: **${{ steps.creds.outputs.project }}**"
             echo "- Firestore rules and indexes: deployed"
-            echo "- Lesson content: ${{ inputs.seed && 'seeded (1 skill, 6 levels, 24 drills)' || 'skipped' }}"
+            echo "- Course content: ${{ inputs.seed && 'seeded — see the seed step for the counts' || 'skipped' }}"
             echo
             echo "Next: run **Build APK** with backend \`firebase\`."
           } >> "$GITHUB_STEP_SUMMARY"
