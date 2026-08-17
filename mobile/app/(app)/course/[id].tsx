@@ -9,7 +9,8 @@ import { useAuth } from '../../../lib/auth'
 import { useProfile } from '../../../lib/profile'
 import { useCourse, type LessonWithState } from '../../../lib/course'
 import { enroll, fetchEnrollments, unenroll } from '../../../lib/enrollment'
-import { canOpenLesson, FREE_LESSON_IDX } from '../../../lib/entitlement'
+import { canOpenLesson, ownsCourse, FREE_LESSON_IDX } from '../../../lib/entitlement'
+import { usePurchases } from '../../../lib/purchases'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
@@ -17,6 +18,7 @@ export default function CourseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { user } = useAuth()
   const { profile } = useProfile()
+  const { owned } = usePurchases()
   const { data, loading, error, reload } = useCourse(id)
   const { t, field, locale, isRTL } = useLocale()
   const insets = useSafeAreaInsets()
@@ -47,6 +49,22 @@ export default function CourseDetail() {
     } finally {
       setWorking(false)
     }
+  }
+
+  /**
+   * Deliberately cannot grant the course. Purchases are read-only to every
+   * client in the security rules, so the only thing that can record one is a
+   * verified store receipt processed server-side. Until billing is connected
+   * there is nothing honest for this button to do but say so.
+   */
+  const buy = () => {
+    Alert.alert(
+      t('Not available yet', 'غير متاح بعد'),
+      t(
+        'Payments are not connected yet. This build cannot take a purchase.',
+        'لم يتم ربط الدفع بعد. لا يمكن لهذه النسخة إتمام عملية شراء.',
+      ),
+    )
   }
 
   const start = async () => {
@@ -85,7 +103,8 @@ export default function CourseDetail() {
   }
 
   const { course, lessons, progress } = data
-  const subscribed = profile?.entitlement ?? null
+  const entitlement = profile?.entitlement ?? null
+  const bought = id ? ownsCourse(id, owned) : false
   const started = progress.completed > 0
 
   return (
@@ -106,10 +125,15 @@ export default function CourseDetail() {
           <Txt style={{ fontSize: 30, fontWeight: '700', letterSpacing: -1, lineHeight: 34, color: colors.text }}>
             {field(course, 'name')}
           </Txt>
-          <Txt style={{ fontSize: 15, color: colors.textSecondary }}>
+          {!!course.summary_en && (
+            <Txt style={{ fontSize: 16, lineHeight: 24, color: colors.text, marginTop: 4 }}>
+              {field(course, 'summary')}
+            </Txt>
+          )}
+          <Txt style={{ fontSize: 15, color: colors.textSecondary, marginTop: 4 }}>
             {t(
-              `${lessons.length} lessons · Taught by ${course.coach_name_en}`,
-              `${localizeNumber(lessons.length, locale)} دروس · بإشراف ${course.coach_name_ar}`,
+              `${lessons.length} lessons · ${course.level_en ?? ''} · Taught by ${course.coach_name_en}`,
+              `${localizeNumber(lessons.length, locale)} دروس · ${course.level_ar ?? ''} · بإشراف ${course.coach_name_ar}`,
             )}
           </Txt>
         </View>
@@ -145,17 +169,19 @@ export default function CourseDetail() {
                 key={l.id}
                 lesson={l}
                 last={i === lessons.length - 1}
-                locked={!canOpenLesson(l.idx, subscribed)}
+                locked={!canOpenLesson({ lessonIdx: l.idx, courseId: course.id, ownedCourseIds: owned, entitlement })}
                 onPress={() => router.push(`/lesson/${l.id}`)}
               />
             ))}
           </View>
-          <Txt style={{ fontSize: 13, lineHeight: 19, color: colors.textSecondary }}>
-            {t(
-              `Lesson ${FREE_LESSON_IDX} is free. The rest come with Crava Pro.`,
-              `الدرس ${localizeNumber(FREE_LESSON_IDX, locale)} مجاني. الباقي مع كرافا برو.`,
-            )}
-          </Txt>
+          {!bought && (
+            <Txt style={{ fontSize: 13, lineHeight: 19, color: colors.textSecondary }}>
+              {t(
+                `Lesson ${FREE_LESSON_IDX} is a free preview. Buy the course to watch the rest.`,
+                `الدرس ${localizeNumber(FREE_LESSON_IDX, locale)} معاينة مجانية. اشترِ الدورة لمشاهدة الباقي.`,
+              )}
+            </Txt>
+          )}
         </View>
 
         {enrolled && (
@@ -167,18 +193,36 @@ export default function CourseDetail() {
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
-        <PrimaryButton
-          label={
-            progress.isComplete
-              ? t('Review the course', 'راجع الدورة')
-              : started
-                ? t('Continue', 'متابعة')
-                : t('Start learning', 'ابدأ التعلم')
-          }
-          busy={working}
-          onPress={() => void start()}
-        />
+      <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 16, gap: 8 }}>
+        {bought ? (
+          <PrimaryButton
+            label={
+              progress.isComplete
+                ? t('Review the course', 'راجع الدورة')
+                : started
+                  ? t('Continue', 'متابعة')
+                  : t('Start learning', 'ابدأ التعلم')
+            }
+            busy={working}
+            onPress={() => void start()}
+          />
+        ) : (
+          <>
+            <PrimaryButton
+              label={
+                course.priceEgp
+                  ? t(`Buy for EGP ${course.priceEgp}`, `اشترِ بـ ${localizeNumber(course.priceEgp, locale)} ج.م`)
+                  : t('Buy this course', 'اشترِ هذه الدورة')
+              }
+              onPress={buy}
+            />
+            <Pressable onPress={() => void start()} accessibilityRole="button">
+              <Txt style={{ fontSize: 15, color: colors.accent, fontWeight: '600', textAlign: 'center', paddingVertical: 6 }}>
+                {t('Watch lesson 1 free', 'شاهد الدرس الأول مجاناً')}
+              </Txt>
+            </Pressable>
+          </>
+        )}
       </View>
     </View>
   )

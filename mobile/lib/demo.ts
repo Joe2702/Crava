@@ -14,76 +14,79 @@ const CATALOG: {
   name_ar: string
   category_en: string
   category_ar: string
+  level_en: string
+  level_ar: string
+  priceEgp: number
   coach_name_en: string
   coach_name_ar: string
-  levels: [string, string][]
+  summary_en: string
+  summary_ar: string
+  lessons: [string, string][]
 }[] = [
   {
-    id: 'muscleup',
-    name_en: 'Full Muscle-Up',
-    name_ar: 'المسل أب الكامل',
+    id: 'calisthenics-beginner',
+    name_en: 'Calisthenics for Beginners',
+    name_ar: 'الكاليسثينكس للمبتدئين',
     category_en: 'Calisthenics',
     category_ar: 'كاليسثينكس',
+    level_en: 'Beginner',
+    level_ar: 'مبتدئ',
+    priceEgp: 349,
     coach_name_en: 'Omar Fathy',
     coach_name_ar: 'عمر فتحي',
-    levels: [
+    summary_en: 'Build the pushing, pulling and core strength every other skill sits on.',
+    summary_ar: 'ابنِ قوة الدفع والسحب والجذع التي تقوم عليها كل المهارات الأخرى.',
+    lessons: [
       ['Dead Hang', 'التعليق الميت'],
+      ['Push-Up Form', 'أداء تمرين الضغط'],
       ['Scapular Pulls', 'سحب لوح الكتف'],
-      ['Strict Pull-Up', 'العقلة الصارمة'],
-      ['Explosive Pull', 'السحب الانفجاري'],
-      ['Transition Drill', 'تمرين الانتقال'],
-      ['Full Muscle-Up', 'المسل أب الكامل'],
+      ['Hollow Body Hold', 'وضعية الجسم المجوف'],
+      ['Assisted Pull-Up', 'العقلة بمساعدة'],
+      ['First Strict Pull-Up', 'أول عقلة صارمة'],
     ],
   },
   {
-    id: 'boxing',
-    name_en: 'Boxing Combos',
-    name_ar: 'توليفات الملاكمة',
+    id: 'boxing-basics',
+    name_en: 'Boxing Basics',
+    name_ar: 'أساسيات الملاكمة',
     category_en: 'Boxing',
     category_ar: 'ملاكمة',
+    level_en: 'Beginner',
+    level_ar: 'مبتدئ',
+    priceEgp: 299,
     coach_name_en: 'Nour El-Sayed',
     coach_name_ar: 'نور السيد',
-    levels: [
+    summary_en: 'Stance, guard and the three punches everything else is built from.',
+    summary_ar: 'الوقفة والحماية واللكمات الثلاث التي يُبنى عليها كل شيء.',
+    lessons: [
       ['Stance & Guard', 'الوقفة والحماية'],
       ['The Jab', 'اللكمة المستقيمة'],
-      ['Jab–Cross', 'جاب – كروس'],
-      ['Hook & Slip', 'الهوك والمراوغة'],
-      ['Three-Punch Combo', 'توليفة ثلاث لكمات'],
-      ['Ring Combinations', 'توليفات الحلبة'],
+      ['The Cross', 'الكروس'],
+      ['The Hook', 'الهوك'],
+      ['Footwork', 'حركة القدمين'],
+      ['Slipping & Rolling', 'المراوغة والدوران'],
     ],
   },
   {
-    id: 'sprint',
-    name_en: 'Sprint Mechanics',
-    name_ar: 'ميكانيكا العدو',
+    id: 'sprint-speed',
+    name_en: 'Run Faster: Sprint Mechanics',
+    name_ar: 'اركض أسرع: ميكانيكا العدو',
     category_en: 'Athletics',
     category_ar: 'ألعاب قوى',
+    level_en: 'All levels',
+    level_ar: 'كل المستويات',
+    priceEgp: 349,
     coach_name_en: 'Karim Adel',
     coach_name_ar: 'كريم عادل',
-    levels: [
+    summary_en: 'Fix the mechanics that cost you tenths over 100 metres.',
+    summary_ar: 'صحّح الميكانيكا التي تكلفك أعشار الثانية في المئة متر.',
+    lessons: [
       ['Posture & Lean', 'وضعية الجسم والميل'],
       ['A-Skip', 'القفز المتناوب'],
       ['Arm Mechanics', 'حركة الذراعين'],
       ['Acceleration', 'التسارع'],
       ['Top Speed', 'السرعة القصوى'],
       ['Block Start', 'الانطلاق من البلوك'],
-    ],
-  },
-  {
-    id: 'parkour',
-    name_en: 'Parkour Basics',
-    name_ar: 'أساسيات الباركور',
-    category_en: 'Parkour',
-    category_ar: 'باركور',
-    coach_name_en: 'Youssef Hany',
-    coach_name_ar: 'يوسف هاني',
-    levels: [
-      ['Landing & Roll', 'الهبوط والدحرجة'],
-      ['Precision Jump', 'قفزة الدقة'],
-      ['Vault Basics', 'أساسيات العبور'],
-      ['Kong Vault', 'قفزة الكونغ'],
-      ['Cat Leap', 'قفزة القط'],
-      ['Wall Run', 'الجري على الحائط'],
     ],
   },
 ]
@@ -95,17 +98,17 @@ const DRILL_TEMPLATE: [string, string, string, string, boolean][] = [
   ['Film yourself and self-check', 'صوّر نفسك وقيّم أداءك', 'Optional, 30s clip', 'اختياري، مقطع ٣٠ ث', false],
 ]
 
-export const DEMO_SKILLS: Skill[] = CATALOG.map(({ levels, ...s }, order) => ({
+export const DEMO_SKILLS: Skill[] = CATALOG.map(({ lessons, ...s }, order) => ({
   ...s,
   sortOrder: order,
   isPublished: true,
-  lessonCount: levels.length,
+  lessonCount: lessons.length,
 }))
 
-export const DEMO_LEVELS: Level[] = CATALOG.flatMap((skill) =>
-  skill.levels.map(([en, ar], i) => ({
-    id: `${skill.id}-${i + 1}`,
-    skillId: skill.id,
+export const DEMO_LEVELS: Level[] = CATALOG.flatMap((course) =>
+  course.lessons.map(([en, ar], i) => ({
+    id: `${course.id}-${i + 1}`,
+    skillId: course.id,
     idx: i + 1,
     name_en: en,
     name_ar: ar,
@@ -136,6 +139,7 @@ interface DemoState {
   drillCompletions: Set<string>
   levelCompletions: Map<string, Date>
   enrollments: Map<string, Date>
+  purchases: Set<string>
 }
 
 function freshUser(displayName = 'Yassin'): UserDoc {
@@ -157,6 +161,7 @@ const state: DemoState = {
   drillCompletions: new Set(),
   levelCompletions: new Map(),
   enrollments: new Map(),
+  purchases: new Set(),
 }
 
 type Listener = () => void
@@ -192,12 +197,26 @@ export const demo = {
     state.drillCompletions.clear()
     state.levelCompletions.clear()
     state.enrollments.clear()
+    state.purchases.clear()
     emit()
   },
   enrollments() {
     return [...state.enrollments.entries()]
       .map(([courseId, enrolledAt]) => ({ courseId, enrolledAt }))
       .sort((a, b) => b.enrolledAt.getTime() - a.enrolledAt.getTime())
+  },
+  purchases(): string[] {
+    return [...state.purchases]
+  },
+  /**
+   * Demo mode only. In the real app a purchase can only be written by a
+   * verified store receipt — the rules refuse it from any client — so there is
+   * deliberately no equivalent of this anywhere outside the demo store.
+   */
+  grantPurchase(courseId: string) {
+    state.purchases.add(courseId)
+    state.enrollments.set(courseId, state.enrollments.get(courseId) ?? new Date())
+    emit()
   },
   enroll(courseId: string) {
     if (!state.enrollments.has(courseId)) state.enrollments.set(courseId, new Date())

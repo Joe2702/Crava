@@ -154,10 +154,11 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           ],
         },
         {
-          heading: 'Subscriptions',
+          heading: 'Buying courses',
           paragraphs: [
-            'Level 1 of every skill is free. The remaining levels require Crava Pro.',
-            'When billing is available, subscriptions renew automatically until cancelled, and are managed through your app store account rather than by us.',
+            'Lesson 1 of every course is a free preview. Buying a course gives you its remaining lessons.',
+            'A course you have bought stays yours; it is not a rental and does not expire.',
+            'When billing is available, purchases are handled through your app store account rather than by us, and refunds follow that store\u2019s policy.',
           ],
         },
         {
@@ -197,10 +198,11 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           ],
         },
         {
-          heading: 'الاشتراكات',
+          heading: 'شراء الدورات',
           paragraphs: [
-            'المستوى الأول من كل مهارة مجاني، وباقي المستويات تتطلب كرافا برو.',
-            'عند توفر الدفع، تتجدد الاشتراكات تلقائياً حتى الإلغاء، وتُدار عبر حسابك في متجر التطبيقات لا عبرنا.',
+            'الدرس الأول من كل دورة معاينة مجانية. شراء الدورة يمنحك باقي دروسها.',
+            'الدورة التي اشتريتها تبقى ملكك؛ ليست إيجاراً ولا تنتهي صلاحيتها.',
+            'عند توفر الدفع، تتم عمليات الشراء عبر حسابك في متجر التطبيقات لا عبرنا، ويخضع الاسترداد لسياسة المتجر.',
           ],
         },
         {

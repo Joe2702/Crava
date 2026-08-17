@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from '../lib/auth'
 import { LocaleProvider, useLocale } from '../lib/i18n'
 import { CatalogProvider } from '../lib/catalog'
 import { ProfileProvider, useProfile } from '../lib/profile'
+import { PurchasesProvider } from '../lib/purchases'
 import { CoachRoleProvider } from '../lib/coachRole'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors } from '../theme/tokens'
@@ -82,11 +83,13 @@ export default function RootLayout() {
       <LocaleProvider>
         <AuthProvider>
           <ProfileProvider>
+            <PurchasesProvider>
             <CatalogProvider>
               <CoachRoleProvider>
                 <AuthGate />
               </CoachRoleProvider>
             </CatalogProvider>
+            </PurchasesProvider>
           </ProfileProvider>
         </AuthProvider>
       </LocaleProvider>

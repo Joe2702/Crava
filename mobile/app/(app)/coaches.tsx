@@ -2,16 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Txt } from '../../../components/Txt'
-import { IconChevronRight } from '../../../components/Icons'
-import { TAB_BAR_CLEARANCE } from '../../../components/TabBar'
-import { fetchCoaches, type Coach } from '../../../lib/coaches'
-import { isDemo } from '../../../lib/firebase'
-import { localizeNumber, useLocale } from '../../../lib/i18n'
-import { cardShadow, colors, radius } from '../../../theme/tokens'
+import { Txt } from '../../components/Txt'
+import { IconChevronRight } from '../../components/Icons'
+import { fetchCoaches, type Coach } from '../../lib/coaches'
+import { isDemo } from '../../lib/firebase'
+import { localizeNumber, useLocale } from '../../lib/i18n'
+import { cardShadow, colors, radius } from '../../theme/tokens'
 
 export default function Coaches() {
-  const { t, field, locale } = useLocale()
+  const { t, field, locale, isRTL } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
 
@@ -44,14 +43,20 @@ export default function Coaches() {
       contentContainerStyle={{
         padding: 20,
         paddingTop: insets.top + 12,
-        paddingBottom: TAB_BAR_CLEARANCE + insets.bottom,
+        paddingBottom: insets.bottom + 32,
         gap: 16,
       }}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={colors.accent} />}
     >
+      <Pressable onPress={() => router.back()} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
+        <View style={{ backgroundColor: colors.fill, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9 }}>
+          <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{isRTL ? 'رجوع ›' : '‹ Back'}</Txt>
+        </View>
+      </Pressable>
+
       <View>
         <Txt style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
-          {t('Marketplace', 'السوق')}
+          {t('Optional', 'اختياري')}
         </Txt>
         <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1.1, color: colors.text, marginVertical: 2 }}>
           {t('Verified coaches', 'مدربون معتمدون')}

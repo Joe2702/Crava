@@ -66,9 +66,19 @@ service cloud.firestore {
 
       // Which courses the learner has started. Account state rather than a
       // device preference, so My learning follows them to a new phone.
+      // Enrolling grants nothing on its own — access comes from purchases.
       match /enrollments/{courseId} {
         allow read, create, delete: if isOwner(uid);
         allow update: if false;
+      }
+
+      // Courses the learner has bought. Readable by the owner and writable by
+      // nobody: a purchase may only be recorded by a verified store receipt,
+      // server-side. If a client could write here it could hand itself the
+      // entire catalogue, which is exactly what this collection controls.
+      match /purchases/{courseId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
 
       // Ticking a step grants nothing by itself; it is only an input to the

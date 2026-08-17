@@ -8,6 +8,7 @@ import { LanguageToggle } from '../../../components/LanguageToggle'
 import { TAB_BAR_CLEARANCE } from '../../../components/TabBar'
 import { useAuth } from '../../../lib/auth'
 import { useCatalog } from '../../../lib/catalog'
+import { usePurchases } from '../../../lib/purchases'
 import { fetchEnrollments } from '../../../lib/enrollment'
 import { fetchCompletedLessonIds } from '../../../lib/course'
 import { progressOf } from '../../../lib/progress'
@@ -17,6 +18,7 @@ import { colors } from '../../../theme/tokens'
 export default function MyLearning() {
   const { user } = useAuth()
   const { courses, loading: catalogLoading } = useCatalog()
+  const { owned } = usePurchases()
   const { t } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -96,6 +98,7 @@ export default function MyLearning() {
           key={c.id}
           course={c}
           progress={progressFor(c.id, c.lessonCount ?? 0)}
+          owned={owned.has(c.id)}
           onPress={() => router.push(`/course/${c.id}`)}
         />
       ))}

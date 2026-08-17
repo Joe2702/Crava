@@ -12,6 +12,7 @@ import { demo, DEMO_DRILLS, DEMO_LEVELS } from '../../../lib/demo'
 import { useAuth } from '../../../lib/auth'
 import { useProfile } from '../../../lib/profile'
 import { canOpenLesson } from '../../../lib/entitlement'
+import { usePurchases } from '../../../lib/purchases'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import type { Lesson, Step } from '../../../lib/types'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
@@ -22,6 +23,7 @@ export default function LessonScreen() {
   const insets = useSafeAreaInsets()
   const { user } = useAuth()
   const { profile } = useProfile()
+  const { owned } = usePurchases()
   const { t, field, locale, isRTL } = useLocale()
 
   const [lesson, setLesson] = useState<Lesson | null>(null)
@@ -161,8 +163,15 @@ export default function LessonScreen() {
 
   if (!lesson) return null
 
-  if (!canOpenLesson(lesson.idx, profile?.entitlement ?? null)) {
-    return <LockedLesson name={field(lesson, 'name')} idx={lesson.idx} />
+  if (
+    !canOpenLesson({
+      lessonIdx: lesson.idx,
+      courseId: lesson.skillId,
+      ownedCourseIds: owned,
+      entitlement: profile?.entitlement ?? null,
+    })
+  ) {
+    return <LockedLesson name={field(lesson, 'name')} idx={lesson.idx} courseId={lesson.skillId} />
   }
 
   const requiredDone = steps.filter((s) => s.isRequired).every((s) => doneSteps.has(s.id))
@@ -262,7 +271,7 @@ export default function LessonScreen() {
   )
 }
 
-function LockedLesson({ name, idx }: { name: string; idx: number }) {
+function LockedLesson({ name, idx, courseId }: { name: string; idx: number; courseId: string }) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t, locale } = useLocale()
@@ -299,12 +308,15 @@ function LockedLesson({ name, idx }: { name: string; idx: number }) {
       </Txt>
       <Txt style={{ fontSize: 15, lineHeight: 22, color: colors.textSecondary, textAlign: 'center', maxWidth: 300 }}>
         {t(
-          'Lesson 1 of every course is free. The rest come with Crava Pro.',
-          'الدرس الأول من كل دورة مجاني. الباقي مع كرافا برو.',
+          'Lesson 1 is a free preview. Buy the course to watch the rest.',
+          'الدرس الأول معاينة مجانية. اشترِ الدورة لمشاهدة الباقي.',
         )}
       </Txt>
       <View style={{ alignSelf: 'stretch', marginTop: 10, gap: 6 }}>
-        <PrimaryButton label={t('See Crava Pro', 'اعرف كرافا برو')} onPress={() => router.push('/paywall')} />
+        <PrimaryButton
+          label={t('See the course', 'اعرض الدورة')}
+          onPress={() => router.replace(`/course/${courseId}`)}
+        />
         <Pressable onPress={() => router.back()} accessibilityRole="button">
           <Txt style={{ textAlign: 'center', padding: 12, fontSize: 15, color: colors.textSecondary }}>
             {t('Back', 'رجوع')}

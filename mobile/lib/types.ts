@@ -16,6 +16,12 @@ export interface Course {
   isPublished: boolean
   /** Denormalised by the seed so a progress bar needs no extra read. */
   lessonCount?: number
+  /** What the course costs, in EGP. Courses are bought one at a time. */
+  priceEgp?: number
+  level_en?: string
+  level_ar?: string
+  summary_en?: string
+  summary_ar?: string
 }
 
 export interface Lesson {

@@ -116,6 +116,7 @@ export default function Profile() {
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
         <LinkRow label={t('Edit profile', 'تعديل الملف')} onPress={() => router.push('/edit-profile')} />
+        <LinkRow label={t('Book a coach', 'احجز مدرباً')} onPress={() => router.push('/coaches')} />
         <LinkRow label={t('My sessions', 'جلساتي')} onPress={() => router.push('/sessions')} last />
       </View>
 

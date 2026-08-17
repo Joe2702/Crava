@@ -14,10 +14,12 @@ import { cardShadow, colors, radius } from '../theme/tokens'
 export function CourseCard({
   course,
   progress,
+  owned,
   onPress,
 }: {
   course: Course
   progress?: CourseProgress
+  owned?: boolean
   onPress: () => void
 }) {
   const { t, field, locale } = useLocale()
@@ -35,8 +37,21 @@ export function CourseCard({
             {field(course, 'name')}
           </Txt>
           <Txt style={{ fontSize: 13, color: colors.textSecondary }} numberOfLines={1}>
-            {field(course, 'category')} · {field(course, 'coach_name')}
+            {course.level_en ? `${field(course, 'level')} · ` : ''}
+            {field(course, 'coach_name')}
           </Txt>
+          {/* Price is the point of the card, so it sits with the title rather
+              than in a corner the eye reaches last. Owned courses show no
+              price — they have already been paid for. */}
+          {owned ? (
+            <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.successDark }}>
+              {t('Purchased', 'تم الشراء')}
+            </Txt>
+          ) : course.priceEgp ? (
+            <Txt style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>
+              {t(`EGP ${course.priceEgp}`, `${localizeNumber(course.priceEgp, locale)} ج.م`)}
+            </Txt>
+          ) : null}
         </View>
         <IconChevronRight />
       </View>

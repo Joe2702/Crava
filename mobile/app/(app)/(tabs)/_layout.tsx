@@ -16,7 +16,6 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: t('Learning', 'تعلّمي') }} />
       <Tabs.Screen name="search" options={{ title: t('Courses', 'الدورات') }} />
-      <Tabs.Screen name="coaches" options={{ title: t('Coaching', 'التدريب') }} />
       <Tabs.Screen name="profile" options={{ title: t('Account', 'حسابي') }} />
     </Tabs>
   )

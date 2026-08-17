@@ -8,6 +8,7 @@ import { IconSearch } from '../../../components/Icons'
 import { CourseCard } from '../../../components/CourseCard'
 import { TAB_BAR_CLEARANCE } from '../../../components/TabBar'
 import { useCatalog } from '../../../lib/catalog'
+import { usePurchases } from '../../../lib/purchases'
 import { useLocale } from '../../../lib/i18n'
 import { colors, radius } from '../../../theme/tokens'
 
@@ -15,6 +16,7 @@ const ALL = '__all__'
 
 export default function Browse() {
   const { courses, loading, error, reload } = useCatalog()
+  const { owned } = usePurchases()
   const { t, field } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -113,7 +115,7 @@ export default function Browse() {
       )}
 
       {results.map((c) => (
-        <CourseCard key={c.id} course={c} onPress={() => open(c.id)} />
+        <CourseCard key={c.id} course={c} owned={owned.has(c.id)} onPress={() => open(c.id)} />
       ))}
 
       {!loading && !error && results.length === 0 && (
