@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Pressable, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
@@ -23,7 +23,7 @@ interface Option {
 
 export default function Onboarding() {
   const { user } = useAuth()
-  const { courses } = useCatalog()
+  const { courses, loading: catalogLoading } = useCatalog()
   const { t, field } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -123,6 +123,10 @@ export default function Onboarding() {
           </Txt>
           <Txt style={{ fontSize: 15, lineHeight: 22, color: colors.textSecondary }}>{current.sub}</Txt>
         </View>
+
+        {step === 0 && catalogLoading && courses.length === 0 && (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 12 }} />
+        )}
 
         <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden', ...cardShadow }}>
           {current.opts.map((o, i) => {

@@ -95,10 +95,11 @@ const DRILL_TEMPLATE: [string, string, string, string, boolean][] = [
   ['Film yourself and self-check', 'صوّر نفسك وقيّم أداءك', 'Optional, 30s clip', 'اختياري، مقطع ٣٠ ث', false],
 ]
 
-export const DEMO_SKILLS: Skill[] = CATALOG.map(({ levels: _levels, ...s }, order) => ({
+export const DEMO_SKILLS: Skill[] = CATALOG.map(({ levels, ...s }, order) => ({
   ...s,
   sortOrder: order,
   isPublished: true,
+  lessonCount: levels.length,
 }))
 
 export const DEMO_LEVELS: Level[] = CATALOG.flatMap((skill) =>

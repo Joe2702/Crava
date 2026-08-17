@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from 'firebase/firestore'
 import { db, isDemo } from './firebase'
 import { demo, DEMO_SKILLS, levelsForSkill } from './demo'
@@ -47,7 +47,13 @@ function build(course: Course, lessons: Lesson[], completed: Set<string>): Cours
  */
 export function useCourse(courseId: string | null | undefined) {
   const { user } = useAuth()
-  const [data, setData] = useState<CourseDetail | null>(null)
+  // Course content and completion state are fetched by different mechanisms —
+  // one a request, the other a live subscription — so they are held apart and
+  // combined for render. Merging them into a single object meant a refetch of
+  // the content reset the completions to empty until the next snapshot event,
+  // which showed as ticks vanishing on pull-to-refresh.
+  const [content, setContent] = useState<{ course: Course; lessons: Lesson[] } | null>(null)
+  const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -57,9 +63,7 @@ export function useCourse(courseId: string | null | undefined) {
 
     if (isDemo) {
       const course = DEMO_SKILLS.find((s) => s.id === courseId)
-      if (course) {
-        setData(build(course, levelsForSkill(courseId), new Set(demo.levelCompletions().keys())))
-      }
+      if (course) setContent({ course, lessons: levelsForSkill(courseId) })
       setLoading(false)
       return
     }
@@ -79,13 +83,10 @@ export function useCourse(courseId: string | null | undefined) {
         ),
       ])
       if (!courseSnap.exists()) throw new Error('Course not found')
-      setData(
-        build(
-          { id: courseSnap.id, ...courseSnap.data() } as Course,
-          lessonSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Lesson),
-          new Set(),
-        ),
-      )
+      setContent({
+        course: { id: courseSnap.id, ...courseSnap.data() } as Course,
+        lessons: lessonSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Lesson),
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load the course')
     } finally {
@@ -103,18 +104,20 @@ export function useCourse(courseId: string | null | undefined) {
     if (!user) return
 
     if (isDemo) {
-      return demo.subscribe(() => {
-        setData((prev) =>
-          prev ? build(prev.course, prev.lessons, new Set(demo.levelCompletions().keys())) : prev,
-        )
-      })
+      const sync = () => setCompleted(new Set(demo.levelCompletions().keys()))
+      sync()
+      return demo.subscribe(sync)
     }
 
     return onSnapshot(collection(db(), 'users', user.uid, 'levelCompletions'), (snap) => {
-      const done = new Set(snap.docs.map((d) => d.id))
-      setData((prev) => (prev ? build(prev.course, prev.lessons, done) : prev))
+      setCompleted(new Set(snap.docs.map((d) => d.id)))
     })
   }, [user])
+
+  const data = useMemo(
+    () => (content ? build(content.course, content.lessons, completed) : null),
+    [content, completed],
+  )
 
   return { data, error, loading, reload: load }
 }

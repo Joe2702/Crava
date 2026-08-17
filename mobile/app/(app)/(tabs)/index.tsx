@@ -14,8 +14,6 @@ import { progressOf } from '../../../lib/progress'
 import { useLocale } from '../../../lib/i18n'
 import { colors } from '../../../theme/tokens'
 
-const LESSONS_PER_COURSE = 6
-
 export default function MyLearning() {
   const { user } = useAuth()
   const { courses, loading: catalogLoading } = useCatalog()
@@ -46,9 +44,11 @@ export default function MyLearning() {
     .map((id) => courses.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c))
 
-  const progressFor = (courseId: string) => {
-    const done = [...completed].filter((id) => id.startsWith(`${courseId}-`)).length
-    return progressOf(done, LESSONS_PER_COURSE)
+  // Lesson ids are "<courseId>-<n>", so the course is everything before the
+  // last dash — splitting on the first would break a course id containing one.
+  const progressFor = (courseId: string, total: number) => {
+    const done = [...completed].filter((id) => id.slice(0, id.lastIndexOf('-')) === courseId).length
+    return progressOf(done, total)
   }
 
   const busy = loading || catalogLoading
@@ -95,7 +95,7 @@ export default function MyLearning() {
         <CourseCard
           key={c.id}
           course={c}
-          progress={progressFor(c.id)}
+          progress={progressFor(c.id, c.lessonCount ?? 0)}
           onPress={() => router.push(`/course/${c.id}`)}
         />
       ))}

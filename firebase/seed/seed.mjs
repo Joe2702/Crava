@@ -124,7 +124,15 @@ let levelCount = 0
 let drillCount = 0
 
 for (const [order, { levels, ...skill }] of SKILLS.entries()) {
-  batch.set(db.collection('skills').doc(skill.id), { ...skill, sortOrder: order, isPublished: true })
+  // lessonCount is denormalised so My learning can show a progress bar per
+  // course without reading every course's lessons. The seed owns it, so it
+  // cannot drift from the lessons actually written below.
+  batch.set(db.collection('skills').doc(skill.id), {
+    ...skill,
+    sortOrder: order,
+    isPublished: true,
+    lessonCount: levels.length,
+  })
 
   for (const [i, [nameEn, nameAr]] of levels.entries()) {
     const idx = i + 1

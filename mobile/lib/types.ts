@@ -14,6 +14,8 @@ export interface Course {
   coach_name_ar: string
   sortOrder: number
   isPublished: boolean
+  /** Denormalised by the seed so a progress bar needs no extra read. */
+  lessonCount?: number
 }
 
 export interface Lesson {
