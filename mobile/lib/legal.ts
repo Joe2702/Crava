@@ -32,9 +32,9 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           paragraphs: [
             'An email address and password, to create and secure your account. Passwords are handled by Firebase Authentication and are never visible to us.',
             'A display name and city, only if you enter them.',
-            'Your training progress: which drills you have ticked and which levels you have cleared, with the date each level was cleared.',
-            'Anything you post to Milestones, including the text of your posts and which posts you have liked.',
-            'Coaching session requests: which coach, which time slot, and which session type.',
+            'Your progress: which lesson steps you have ticked and which lessons you have completed, with the date each was completed.',
+            'Which courses you have started and which you have bought.',
+            'Coaching session requests, if you make one: which coach, which time slot, and which session type.',
           ],
         },
         {
@@ -52,16 +52,15 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
         {
           heading: 'Who can see it',
           paragraphs: [
-            'Your progress is readable only by you. Security rules enforce this at the database, not just in the app.',
-            'Anything you post to Milestones is visible to every signed-in user, along with the display name on your account. Do not post anything you would not want other users to see.',
-            'When you request a session, the coach you selected can see that request.',
+            'Your progress and your purchases are readable only by you. Security rules enforce this at the database, not just in the app.',
+            'When you request a coaching session, the coach you selected can see that request and your name.',
           ],
         },
         {
           heading: 'Deleting your data',
           paragraphs: [
-            'You can delete your account from the You tab. This removes your profile, your drill and level completions, and your account itself.',
-            'Posts you have made to Milestones are deleted individually from the post menu. Delete them before deleting your account if you want them gone.',
+            'You can delete your account from the Account tab. This removes your profile, your progress, your enrolments, and your account itself.',
+            'Deleting your account does not refund purchases; refunds are handled by the app store you bought through.',
           ],
         },
         {
@@ -84,9 +83,9 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           paragraphs: [
             'البريد الإلكتروني وكلمة المرور لإنشاء حسابك وتأمينه. كلمات المرور تديرها Firebase Authentication ولا نراها إطلاقاً.',
             'الاسم والمدينة، فقط إذا أدخلتهما.',
-            'تقدمك في التدريب: التمارين التي أنجزتها والمستويات التي أنهيتها وتاريخ كل منها.',
-            'ما تنشره في الإنجازات، بما في ذلك نص المنشورات والإعجابات.',
-            'طلبات جلسات التدريب: المدرب والموعد ونوع الجلسة.',
+            'تقدمك: الخطوات التي أنجزتها والدروس التي أكملتها وتاريخ كل منها.',
+            'الدورات التي بدأتها والدورات التي اشتريتها.',
+            'طلبات جلسات التدريب إن طلبت واحدة: المدرب والموعد ونوع الجلسة.',
           ],
         },
         {
@@ -104,16 +103,15 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
         {
           heading: 'من يمكنه رؤيتها',
           paragraphs: [
-            'تقدمك مرئي لك وحدك، وقواعد الأمان تفرض ذلك على مستوى قاعدة البيانات لا التطبيق فقط.',
-            'ما تنشره في الإنجازات يراه كل مستخدم مسجّل، مع الاسم الظاهر على حسابك. لا تنشر ما لا تريد أن يراه الآخرون.',
-            'عند طلب جلسة، يرى المدرب المختار هذا الطلب.',
+            'تقدمك ومشترياتك مرئية لك وحدك، وقواعد الأمان تفرض ذلك على مستوى قاعدة البيانات لا التطبيق فقط.',
+            'عند طلب جلسة تدريب، يرى المدرب المختار هذا الطلب واسمك.',
           ],
         },
         {
           heading: 'حذف بياناتك',
           paragraphs: [
-            'يمكنك حذف حسابك من تبويب «حسابي». يحذف ذلك ملفك الشخصي وتمارينك ومستوياتك المكتملة والحساب نفسه.',
-            'تُحذف منشورات الإنجازات واحداً واحداً من قائمة المنشور. احذفها قبل حذف حسابك إن أردت إزالتها.',
+            'يمكنك حذف حسابك من تبويب «حسابي». يحذف ذلك ملفك الشخصي وتقدمك وتسجيلاتك والحساب نفسه.',
+            'حذف الحساب لا يعني استرداد المشتريات؛ الاسترداد يتم عبر متجر التطبيقات الذي اشتريت منه.',
           ],
         },
         {
@@ -135,7 +133,7 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
         {
           heading: 'Training at your own risk',
           paragraphs: [
-            'Crava teaches physical skills. Strength training, boxing, sprinting and parkour carry a real risk of injury.',
+            'Crava sells video courses that teach physical skills. Strength training, boxing, sprinting and parkour carry a real risk of injury.',
             'Crava is not medical advice. Check with a doctor before starting, especially if you have an injury or a health condition. Stop if something hurts. You train at your own risk.',
           ],
         },
@@ -143,14 +141,6 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           heading: 'Your account',
           paragraphs: [
             'You are responsible for what happens under your account. One account per person, and do not share your password.',
-          ],
-        },
-        {
-          heading: 'What you post',
-          paragraphs: [
-            'You keep ownership of what you post, and you give us permission to display it inside the app.',
-            'Do not post anything abusive, harassing, sexual, hateful, illegal, or that is not yours to post. Report anything that breaks this from the post menu, and block anyone you do not want to see.',
-            'We can remove posts and suspend accounts that break these rules.',
           ],
         },
         {
@@ -179,7 +169,7 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
         {
           heading: 'التدريب على مسؤوليتك',
           paragraphs: [
-            'كرافا يعلّم مهارات بدنية. تدريب القوة والملاكمة والعدو والباركور تحمل خطر إصابة حقيقياً.',
+            'كرافا يبيع دورات فيديو تعلّم مهارات بدنية. تدريب القوة والملاكمة والعدو والباركور تحمل خطر إصابة حقيقياً.',
             'كرافا ليس نصيحة طبية. استشر طبيباً قبل البدء، خاصة إن كنت تعاني إصابة أو حالة صحية. توقف إذا شعرت بألم. أنت تتدرب على مسؤوليتك.',
           ],
         },
@@ -187,14 +177,6 @@ export const LEGAL: Record<LegalDoc, Record<'en' | 'ar', Content>> & { updated: 
           heading: 'حسابك',
           paragraphs: [
             'أنت مسؤول عما يحدث عبر حسابك. حساب واحد لكل شخص، ولا تشارك كلمة المرور.',
-          ],
-        },
-        {
-          heading: 'ما تنشره',
-          paragraphs: [
-            'تحتفظ بملكية ما تنشره، وتمنحنا إذناً بعرضه داخل التطبيق.',
-            'لا تنشر ما هو مسيء أو تحرّشي أو جنسي أو كراهي أو غير قانوني أو ليس ملكك. أبلغ عن أي مخالفة من قائمة المنشور، واحظر من لا تريد رؤيته.',
-            'يحق لنا حذف المنشورات وإيقاف الحسابات المخالفة.',
           ],
         },
         {
