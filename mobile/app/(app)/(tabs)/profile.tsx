@@ -10,12 +10,13 @@ import { useAuth } from '../../../lib/auth'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { useSkillPath } from '../../../lib/useSkillPath'
 import { LanguageToggle } from '../../../components/LanguageToggle'
+import { IconChevronRight } from '../../../components/Icons'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function Profile() {
   const { data, loading, reload } = useSkillPath()
   const { signOut, deleteAccount, user: authUser } = useAuth()
-  const { t, locale, isRTL } = useLocale()
+  const { t, locale } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -82,12 +83,6 @@ export default function Profile() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32, gap: 16 }}
     >
-      <Pressable onPress={() => router.back()} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
-        <View style={{ backgroundColor: colors.fill, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9 }}>
-          <Txt style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{isRTL ? 'رجوع ›' : '‹ Back'}</Txt>
-        </View>
-      </Pressable>
-
       <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1, color: colors.text }}>
         {user.displayName || t('Athlete', 'بطل')}
       </Txt>
@@ -96,6 +91,13 @@ export default function Profile() {
         {stat(n(cleared), t('Levels', 'مستويات'))}
         {stat(n(streak), t('Day streak', 'يوم متتالي'))}
         {stat(n(xp), 'XP')}
+      </View>
+
+      <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
+        <LinkRow label={t('Edit profile', 'تعديل الملف')} onPress={() => router.push('/edit-profile')} />
+        <LinkRow label={t('Achievements', 'الإنجازات')} onPress={() => router.push('/achievements')} />
+        <LinkRow label={t('My sessions', 'جلساتي')} onPress={() => router.push('/sessions')} />
+        <LinkRow label={t('Milestones', 'الإنجازات العامة')} onPress={() => router.push('/community')} />
       </View>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
@@ -135,11 +137,37 @@ export default function Profile() {
         </Pressable>
       </View>
 
+      {/* Both stores require these to be reachable from inside the app. */}
+      <View style={{ backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', ...cardShadow }}>
+        <LinkRow label={t('Privacy policy', 'سياسة الخصوصية')} onPress={() => router.push('/legal/privacy')} />
+        <LinkRow label={t('Terms of use', 'شروط الاستخدام')} onPress={() => router.push('/legal/terms')} last />
+      </View>
+
       <Pressable onPress={confirmDelete} disabled={busy} accessibilityRole="button" style={{ padding: 16 }}>
         <Txt style={{ fontSize: 15, color: colors.accent, textAlign: 'center' }}>
           {busy ? t('Deleting…', 'جارٍ الحذف…') : t('Delete account', 'حذف الحساب')}
         </Txt>
       </Pressable>
     </ScrollView>
+  )
+}
+
+function LinkRow({ label, onPress, last }: { label: string; onPress: () => void; last?: boolean }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderBottomWidth: last ? 0 : 0.5,
+        borderBottomColor: colors.separator,
+      }}
+    >
+      <Txt style={{ fontSize: 16, color: colors.text }}>{label}</Txt>
+      <IconChevronRight />
+    </Pressable>
   )
 }
