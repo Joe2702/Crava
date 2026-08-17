@@ -42,6 +42,12 @@ That means each such rule needs a matching clause in the query *and* a composite
 index covering it. Adding a field test to a collection rule without doing both
 breaks the app at runtime while looking correct in review.
 
+Only *composite* indexes belong in `firestore.indexes.json`. Firestore creates a
+single-field index for every field automatically, and declaring one is rejected
+at deploy with `this index is not necessary, configure using single field index
+controls` — so a query filtering on one field alone, like
+`where('ownerUid', '==', uid)`, needs no entry at all.
+
 ## Cloud Functions (optional, needs Blaze)
 
 `functions/` holds `getPlaybackUrl`, which signs video URLs. It is **not needed
