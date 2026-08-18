@@ -1,12 +1,18 @@
 /**
- * Seeds the Full Muscle-Up content into Firestore.
+ * Seeds the course catalogue into Firestore.
  *
  *   cd firebase/seed
  *   npm install
  *   GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json node seed.mjs
  *
- * Safe to re-run: every write is keyed by a deterministic id, so it updates in
- * place rather than duplicating.
+ * Safe to re-run. Every write is keyed by a deterministic id, so it updates in
+ * place rather than duplicating, and three things are deliberately preserved
+ * rather than reset:
+ *
+ *  - a lesson's attached video (hasVideo, durationS) — see below
+ *  - a coach's ownerUid and bio
+ *  - courses from an older catalogue, which are unpublished, not deleted, so
+ *    anyone who bought one keeps it
  */
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -183,6 +189,17 @@ const SLOTS = [
   ['Thu', 'الخميس', '20:00'],
 ]
 
+// Videos are attached after seeding, by attach-video.mjs, which sets hasVideo
+// and durationS on the lesson. Writing those unconditionally here would unhook
+// every video on the next re-seed — the lesson would go back to showing "not
+// uploaded yet" while the file sat in Cloudflare, untouched and unreachable.
+// So they are only initialised on lessons that do not exist yet.
+const allLessonIds = SKILLS.flatMap((c) => c.lessons.map((_, i) => `${c.id}-${i + 1}`))
+const existingLessons = await db.getAll(
+  ...allLessonIds.map((id) => db.collection('levels').doc(id)),
+)
+const isNewLesson = new Map(existingLessons.map((d) => [d.id, !d.exists]))
+
 const batch = db.batch()
 let levelCount = 0
 let drillCount = 0
@@ -201,15 +218,18 @@ for (const [order, { lessons, ...skill }] of SKILLS.entries()) {
   for (const [i, [nameEn, nameAr]] of lessons.entries()) {
     const idx = i + 1
     const levelId = `${skill.id}-${idx}`
-    batch.set(db.collection('levels').doc(levelId), {
-      skillId: skill.id,
-      idx,
-      name_en: nameEn,
-      name_ar: nameAr,
-      hasVideo: false,
-      durationS: null,
-      isPublished: true,
-    })
+    batch.set(
+      db.collection('levels').doc(levelId),
+      {
+        skillId: skill.id,
+        idx,
+        name_en: nameEn,
+        name_ar: nameAr,
+        isPublished: true,
+        ...(isNewLesson.get(levelId) ? { hasVideo: false, durationS: null } : {}),
+      },
+      { merge: true },
+    )
     levelCount++
 
     for (const [j, [dEn, dAr, mEn, mAr, required]] of DRILLS.entries()) {

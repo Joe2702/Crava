@@ -6,13 +6,13 @@ import { Txt } from '../../../components/Txt'
 import { useAuth } from '../../../lib/auth'
 import { useCoachRole, fetchCoachBookings, decideBooking, type CoachBooking } from '../../../lib/coachRole'
 import { fetchCoach, type Slot } from '../../../lib/coaches'
-import { useLocale } from '../../../lib/i18n'
+import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
 
 export default function CoachRequests() {
   const { user } = useAuth()
   const { coach } = useCoachRole()
-  const { t, field, isRTL } = useLocale()
+  const { t, field, locale, isRTL } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
 
@@ -43,6 +43,16 @@ export default function CoachRequests() {
     void load()
   }, [load])
 
+  const confirmDecline = (row: CoachBooking) =>
+    Alert.alert(
+      t('Decline this request?', 'رفض هذا الطلب؟'),
+      t('They will see that you turned it down.', 'سيرى أنك رفضت الطلب.'),
+      [
+        { text: t('Cancel', 'إلغاء'), style: 'cancel' },
+        { text: t('Decline', 'رفض'), style: 'destructive', onPress: () => void decide(row, 'declined') },
+      ],
+    )
+
   const decide = async (row: CoachBooking, status: 'confirmed' | 'declined') => {
     setBusy(row.id)
     try {
@@ -57,6 +67,17 @@ export default function CoachRequests() {
 
   const pending = rows.filter((r) => r.status === 'requested')
   const settled = rows.filter((r) => r.status !== 'requested')
+
+  const initialOf = (name: string | null) => (name?.trim()?.[0] ?? '?').toUpperCase()
+
+  /** Relative rather than a date: a coach cares how long someone has waited. */
+  const askedAt = (at: Date) => {
+    const hours = Math.floor((Date.now() - at.getTime()) / 3_600_000)
+    if (hours < 1) return t('Just now', 'الآن')
+    if (hours < 24) return t(`${hours}h ago`, `قبل ${localizeNumber(hours, locale)} ساعة`)
+    const days = Math.floor(hours / 24)
+    return t(`${days}d ago`, `قبل ${localizeNumber(days, locale)} يوم`)
+  }
 
   const slotLabel = (slotId: string) => {
     const s = slots.find((x) => x.id === slotId)
@@ -82,6 +103,16 @@ export default function CoachRequests() {
         <Txt style={{ fontSize: 32, fontWeight: '700', letterSpacing: -1.1, color: colors.text }}>
           {t('Requests', 'الطلبات')}
         </Txt>
+        {!loading && (
+          <Txt style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
+            {pending.length === 0
+              ? t('Nothing waiting on you', 'لا شيء بانتظارك')
+              : t(
+                  `${pending.length} waiting on you`,
+                  `${localizeNumber(pending.length, locale)} بانتظارك`,
+                )}
+          </Txt>
+        )}
       </View>
 
       {loading && <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />}
@@ -113,11 +144,34 @@ export default function CoachRequests() {
               key={r.id}
               style={{ backgroundColor: colors.surface, borderRadius: radius.xl, padding: 16, gap: 12, ...cardShadow }}
             >
-              <View style={{ gap: 3 }}>
-                <Txt style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                  {r.sessionType === 'form' ? t('Form review', 'مراجعة أداء') : t('Live 1-on-1', 'جلسة فردية')}
-                </Txt>
-                <Txt style={{ fontSize: 13, color: colors.textSecondary }}>{slotLabel(r.slotId)}</Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.fill,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Txt style={{ fontSize: 16, fontWeight: '700', color: colors.textSecondary }}>
+                    {initialOf(r.userName)}
+                  </Txt>
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt style={{ fontSize: 16, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                    {r.userName ?? t('A learner', 'متعلم')}
+                  </Txt>
+                  <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
+                    {r.sessionType === 'form' ? t('Form review', 'مراجعة أداء') : t('Live 1-on-1', 'جلسة فردية')}
+                    {' · '}
+                    {slotLabel(r.slotId)}
+                  </Txt>
+                  {!!r.createdAt && (
+                    <Txt style={{ fontSize: 12, color: colors.textTertiary }}>{askedAt(r.createdAt)}</Txt>
+                  )}
+                </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
@@ -136,7 +190,7 @@ export default function CoachRequests() {
                   <Txt style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>{t('Accept', 'قبول')}</Txt>
                 </Pressable>
                 <Pressable
-                  onPress={() => void decide(r, 'declined')}
+                  onPress={() => confirmDecline(r)}
                   disabled={busy === r.id}
                   accessibilityRole="button"
                   style={{
@@ -175,10 +229,14 @@ export default function CoachRequests() {
                 }}
               >
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Txt style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-                    {r.sessionType === 'form' ? t('Form review', 'مراجعة أداء') : t('Live 1-on-1', 'جلسة فردية')}
+                  <Txt style={{ fontSize: 15, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                    {r.userName ?? t('A learner', 'متعلم')}
                   </Txt>
-                  <Txt style={{ fontSize: 13, color: colors.textSecondary }}>{slotLabel(r.slotId)}</Txt>
+                  <Txt style={{ fontSize: 13, color: colors.textSecondary }}>
+                    {r.sessionType === 'form' ? t('Form review', 'مراجعة أداء') : t('Live 1-on-1', 'جلسة فردية')}
+                    {' · '}
+                    {slotLabel(r.slotId)}
+                  </Txt>
                 </View>
                 <View
                   style={{

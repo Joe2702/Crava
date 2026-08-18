@@ -7,6 +7,7 @@ import { PrimaryButton } from '../../../components/ui'
 import { Chip } from '../../../components/Chip'
 import { IconCheck, IconCheckBig } from '../../../components/Icons'
 import { useAuth } from '../../../lib/auth'
+import { useProfile } from '../../../lib/profile'
 import { fetchCoach, requestBooking, FORM_REVIEW_EGP, type Coach, type SessionType, type Slot } from '../../../lib/coaches'
 import { localizeNumber, useLocale } from '../../../lib/i18n'
 import { cardShadow, colors, radius } from '../../../theme/tokens'
@@ -14,6 +15,7 @@ import { cardShadow, colors, radius } from '../../../theme/tokens'
 export default function Booking() {
   const { coachId } = useLocalSearchParams<{ coachId: string }>()
   const { user } = useAuth()
+  const { profile } = useProfile()
   const { t, field, locale, isRTL } = useLocale()
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -52,6 +54,7 @@ export default function Booking() {
     try {
       await requestBooking({
         uid: user.uid,
+        userName: profile?.displayName ?? user.displayName ?? null,
         coachId: coach.id,
         coachOwnerUid: coach.ownerUid ?? null,
         slotId,

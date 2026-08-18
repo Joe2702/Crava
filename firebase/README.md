@@ -213,13 +213,26 @@ firebase functions:config:set    # not needed; the two below are params
 #   STREAM_CUSTOMER_CODE=<from your Stream embed URL>
 ```
 
-5. Attach the uploaded video to a level:
+5. Attach the uploaded video to a lesson:
 
 ```bash
 cd firebase/seed
+
+# what needs a video, and what already has one
+GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json node attach-video.mjs --list
+
+# lesson id, Cloudflare video UID, and the duration in seconds
 GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json \
-  node attach-video.mjs muscleup-1 <stream-video-uid> 252
+  node attach-video.mjs calisthenics-beginner-1 <stream-video-uid> 252
 ```
+
+Lesson ids are `<courseId>-<n>`, numbered from 1 in curriculum order — the third
+lesson of Boxing Basics is `boxing-basics-3`.
+
+Re-running the seed does **not** unhook attached videos: `hasVideo` and
+`durationS` are only initialised on lessons that do not exist yet. Without that,
+every re-seed would send a filmed lesson back to "Video not uploaded yet" while
+the file sat in Cloudflare, untouched and unreachable.
 
 ### How access is enforced
 

@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { Alert, Pressable, ScrollView, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Txt } from '../../../components/Txt'
 import { Field, PrimaryButton } from '../../../components/ui'
 import { useAuth } from '../../../lib/auth'
-import { applyToCoach } from '../../../lib/coachRole'
+import { applyToCoach, hasApplied } from '../../../lib/coachRole'
 import { useLocale } from '../../../lib/i18n'
 import { colors, radius } from '../../../theme/tokens'
 
@@ -18,6 +18,17 @@ export default function CoachApply() {
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [checking, setChecking] = useState(true)
+
+  // Without this the form is offered again to someone who already applied, and
+  // sending overwrites their first application with no sign anything happened.
+  useEffect(() => {
+    if (!user) return
+    hasApplied(user.uid)
+      .then(setSent)
+      .catch(() => {})
+      .finally(() => setChecking(false))
+  }, [user])
 
   const submit = async () => {
     if (!user || !note.trim()) return
@@ -48,11 +59,13 @@ export default function CoachApply() {
           {t('Coach on Crava', 'درّب على كرافا')}
         </Txt>
 
-        {sent ? (
+        {checking ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 12 }} />
+        ) : sent ? (
           <Txt style={{ fontSize: 16, lineHeight: 24, color: colors.text }}>
             {t(
-              'Thanks — your application is in. Every coach is checked by a person before going live, so this is not instant.',
-              'شكراً، وصل طلبك. يراجع شخص كل مدرب قبل النشر، لذا الأمر ليس فورياً.',
+              'Your application is in. Every coach is checked by a person before going live, so this is not instant — we will be in touch.',
+              'وصل طلبك. يراجع شخص كل مدرب قبل النشر، لذا الأمر ليس فورياً — سنتواصل معك.',
             )}
           </Txt>
         ) : (
@@ -76,7 +89,7 @@ export default function CoachApply() {
         )}
       </ScrollView>
 
-      {!sent && (
+      {!sent && !checking && (
         <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 16 }}>
           <PrimaryButton
             label={t('Send application', 'إرسال الطلب')}

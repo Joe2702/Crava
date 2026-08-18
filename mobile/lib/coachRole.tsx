@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   query,
@@ -72,6 +73,7 @@ export function useCoachRole() {
 export interface CoachBooking {
   id: string
   userUid: string
+  userName: string | null
   coachId: string
   slotId: string
   sessionType: 'form' | 'live'
@@ -90,6 +92,7 @@ export async function fetchCoachBookings(ownerUid: string): Promise<CoachBooking
       return {
         id: d.id,
         userUid: data.userUid as string,
+        userName: (data.userName as string | null) ?? null,
         coachId: data.coachId as string,
         slotId: data.slotId as string,
         sessionType: data.sessionType as 'form' | 'live',
@@ -111,7 +114,12 @@ export async function updateCoachProfile(
   await updateDoc(doc(db(), 'coaches', coachId), patch)
 }
 
-/** Write-only from the client: an applicant cannot read the queue back. */
+/** Whether this account has already applied, so the form is not offered twice. */
+export async function hasApplied(uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db(), 'coachApplications', uid))
+  return snap.exists()
+}
+
 export async function applyToCoach(uid: string, note: string) {
   await setDoc(doc(db(), 'coachApplications', uid), {
     note: note.trim(),

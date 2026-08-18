@@ -98,10 +98,10 @@ export function LessonVideo({ levelId, hasVideo }: { levelId: string; hasVideo: 
     return shell(
       <>
         <Txt style={{ color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
-          {t('Crava Pro', 'كرافا برو')}
+          {t('Locked', 'مقفل')}
         </Txt>
         <Txt style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'center' }}>
-          {t('Subscribe to unlock this lesson.', 'اشترك لفتح هذا الدرس.')}
+          {t('Buy this course to watch the lesson.', 'اشترِ هذه الدورة لمشاهدة الدرس.')}
         </Txt>
       </>,
     )
@@ -130,7 +130,10 @@ export function LessonVideo({ levelId, hasVideo }: { levelId: string; hasVideo: 
           justifyContent: 'center',
         }}
       >
-        <Txt style={{ fontSize: 24, color: colors.text, marginLeft: 4 }}>▶</Txt>
+        {/* The glyph is visually left-heavy, so it needs nudging to look
+            centred — marginStart rather than marginLeft, or it drifts the wrong
+            way in Arabic. */}
+        <Txt style={{ fontSize: 24, color: colors.text, marginStart: 4 }}>▶</Txt>
       </View>
     </Pressable>,
   )

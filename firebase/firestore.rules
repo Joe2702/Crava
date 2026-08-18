@@ -127,12 +127,14 @@ service cloud.firestore {
       }
     }
 
-    // Anyone signed in can apply to coach. Write-only from the client: an
-    // applicant cannot read the queue back or change a decision.
+    // Anyone signed in can apply to coach. An applicant may read their own
+    // application back, so the app can say it was received rather than offering
+    // to send it again — but not anyone else's, and not change a decision.
     match /coachApplications/{uid} {
+      allow read: if isOwner(uid);
       allow create: if isOwner(uid)
                     && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if false;
+      allow update, delete: if false;
     }
 
     // A booking is a request, not a confirmation, so two people asking for the
@@ -154,8 +156,8 @@ service cloud.firestore {
                     && request.resource.data.status == 'requested'
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.keys().hasOnly(
-                         ['userUid', 'coachId', 'coachOwnerUid', 'slotId', 'sessionType',
-                          'status', 'createdAt'])
+                         ['userUid', 'userName', 'coachId', 'coachOwnerUid', 'slotId',
+                          'sessionType', 'status', 'createdAt'])
                     && request.resource.data.sessionType in ['form', 'live']
                     && request.resource.data.coachOwnerUid ==
                          get(/databases/$(database)/documents/coaches/$(request.resource.data.coachId))

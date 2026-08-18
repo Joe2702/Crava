@@ -59,6 +59,7 @@ export async function fetchCoach(coachId: string): Promise<{ coach: Coach; slots
  */
 export async function requestBooking(input: {
   uid: string
+  userName: string | null
   coachId: string
   coachOwnerUid: string | null
   slotId: string
@@ -66,6 +67,10 @@ export async function requestBooking(input: {
 }) {
   await addDoc(collection(db(), 'bookings'), {
     userUid: input.uid,
+    // Carried on the booking so the coach can see who is asking. Without it
+    // their inbox is a list of time slots with no people attached, which is not
+    // enough to decide on. The uid is still there as the authoritative id.
+    userName: input.userName,
     coachId: input.coachId,
     // Denormalised so the coach can query the requests sent to them with a
     // filter the rules can prove. Create is checked against the coach document,
