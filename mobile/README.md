@@ -17,9 +17,9 @@ npx expo start
 ### Demo mode — no setup needed
 
 With no `mobile/.env`, the app runs against an in-memory store so it can be
-opened immediately. Sign in with any email and password. Everything works —
-levels, drills, XP, streak, Arabic — but nothing is saved, so progress resets
-when the app restarts. A banner on the sign-in screen says so.
+opened immediately. Sign in with any email and password. The catalogue, lessons
+and Arabic all work, but nothing is saved, so progress resets when the app
+restarts. A banner on the sign-in screen says so.
 
 To use the real backend, follow `firebase/README.md` and fill in `mobile/.env`;
 the app switches over automatically.
@@ -34,13 +34,17 @@ straight in.
 
 - Toggle **EN / عربي** — the whole UI should flip to right-to-left with proper
   Arabic type.
-- Open level 1, tick the three required drills, then **Mark level complete**.
-  You should get +120 XP, a 1-day streak, and level 2 should unlock.
+- **Courses** lists the catalogue with prices. Open one for its summary and
+  curriculum.
+- Lesson 1 of every course is a free preview; the rest need the course bought.
+  The buy button cannot charge yet and says so.
+- Tick a lesson's steps and **Complete and continue** — it moves to the next
+  lesson rather than interrupting you.
 - Force-quit and reopen — you should stay signed in with progress intact.
-- Tap ☰ for the profile screen (stats, language, notifications, delete account).
+- **Account → Book a coach** for the coaching side.
 
-The lesson video is deliberately a placeholder reading "Video not uploaded
-yet" — no lessons have been filmed.
+Every lesson video is a placeholder reading "Video not uploaded yet" — nothing
+has been filmed.
 
 ### If something breaks
 

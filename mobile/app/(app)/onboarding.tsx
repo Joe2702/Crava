@@ -11,7 +11,7 @@ import { demo } from '../../lib/demo'
 import { useAuth } from '../../lib/auth'
 import { useCatalog } from '../../lib/catalog'
 import { enroll } from '../../lib/enrollment'
-import { useLocale } from '../../lib/i18n'
+import { localizeNumber, useLocale } from '../../lib/i18n'
 import { syncReminders } from '../../lib/reminders'
 import { cardShadow, colors, radius } from '../../theme/tokens'
 
@@ -43,7 +43,10 @@ export default function Onboarding() {
       opts: courses.map((c) => ({
         id: c.id,
         title: field(c, 'name'),
-        meta: t(`${c.category_en} · 6 lessons`, `${c.category_ar} · ٦ دروس`),
+        meta: t(
+          `${c.category_en} · ${c.lessonCount ?? 0} lessons`,
+          `${c.category_ar} · ${localizeNumber(c.lessonCount ?? 0, 'ar')} دروس`,
+        ),
       })),
       value: courseId,
       pick: setCourseId,

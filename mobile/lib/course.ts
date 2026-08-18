@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db, isDemo } from './firebase'
 import { demo, DEMO_SKILLS, levelsForSkill } from './demo'
 import { useAuth } from './auth'
@@ -129,4 +129,3 @@ export async function fetchCompletedLessonIds(uid: string): Promise<Set<string>>
   return new Set(snap.docs.map((d) => d.id))
 }
 
-export type { Timestamp }

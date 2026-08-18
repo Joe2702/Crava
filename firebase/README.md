@@ -11,6 +11,17 @@ completion already recorded against a level id, which is not worth it for a
 vocabulary change — so the mapping lives in `mobile/lib/types.ts` and nowhere
 else.
 
+## Buying a course
+
+Courses are bought one at a time. `users/{uid}/purchases/{courseId}` is readable
+by its owner and writable by **nobody** — only a verified store receipt,
+processed server-side, may record one. A client that could write there could
+hand itself the entire catalogue.
+
+The all-access subscription (`entitlement` on the user document) is a second way
+in and is client-unwritable for the same reason. A bought course does not depend
+on it: buying is permanent, subscribing is not.
+
 ## How progress stays honest without a server
 
 Progress is **not stored**. It is computed from `levelCompletions`: a course is
@@ -58,11 +69,13 @@ controls` — so a query filtering on one field alone, like
 
 ## Cloud Functions (optional, needs Blaze)
 
-`functions/` holds `getPlaybackUrl`, which signs video URLs. It is **not needed
-until you have videos**, and it requires the Blaze plan. Deploy it with
-`./setup.sh --with-functions` once you upgrade. `completeLevel` and
-`deleteAccount` in there are superseded by the rules above and by client-side
-deletion — they are kept only for reference.
+`functions/` holds one function, `getPlaybackUrl`, which signs video URLs. It is
+**not needed until you have videos**, and it requires the Blaze plan. Deploy it
+with `./setup.sh --with-functions` once you upgrade.
+
+It is the only thing that has to run server-side: signing needs a private key,
+and a key shipped inside an app is not a secret. It is also the real access
+gate — it checks the purchase, not the app.
 
 ## Data model
 
@@ -72,7 +85,9 @@ levels/{levelId}                     { skillId, idx, ... }
 drills/{drillId}                     { levelId, idx, isRequired, ... }
 levelVideos/{levelId}                playback ids, unreadable by any client
 users/{uid}                          profile + entitlement (no stored progress)
-users/{uid}/enrollments/{courseId}   the My learning list
+users/{uid}/enrollments/{courseId}   the My learning list; grants nothing
+users/{uid}/purchases/{courseId}     bought courses; readable by the owner,
+                                     writable by nobody
 users/{uid}/drillCompletions/{id}    client-writable; grants nothing alone
 users/{uid}/levelCompletions/{id}    create-only, gated by the rules above
 ```
@@ -134,8 +149,10 @@ npm install
 GOOGLE_APPLICATION_CREDENTIALS=./serviceAccount.json npm run seed
 ```
 
-Writes 1 skill, 6 levels and 24 drills. Safe to re-run — ids are deterministic,
-so it updates in place rather than duplicating.
+Writes the whole catalogue — the run prints the counts. Safe to re-run: ids are
+deterministic, so it updates in place rather than duplicating, and any course
+from an earlier catalogue is unpublished rather than deleted, so a learner who
+bought one keeps it.
 
 ## Coaches
 

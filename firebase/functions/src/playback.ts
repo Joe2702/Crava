@@ -29,9 +29,9 @@ function hasActiveEntitlement(entitlement: unknown): boolean {
  * Returns a short-lived signed HLS URL for a level's video.
  *
  * Playback IDs are never handed to the client directly and the URL expires, so
- * a subscriber cannot lift a permanent link and pass it around. Entitlement is
- * checked here rather than in the app, because a client-side check is only a
- * suggestion.
+ * nobody can lift a permanent link and pass it around. Access is checked here
+ * rather than in the app, because a client-side check is only a suggestion —
+ * this is the real gate.
  */
 export const getPlaybackUrl = onCall<{ levelId?: string }>(
   { secrets: [STREAM_KEY_PEM] },
@@ -59,9 +59,17 @@ export const getPlaybackUrl = onCall<{ levelId?: string }>(
 
     const idx: number = levelSnap.get('idx') ?? 0
     if (idx !== FREE_LEVEL_IDX) {
-      const userSnap = await db.collection('users').doc(uid).get()
-      if (!hasActiveEntitlement(userSnap.get('entitlement'))) {
-        throw new HttpsError('permission-denied', 'Crava Pro is required for this lesson.')
+      // Courses are bought one at a time, so owning this one is the usual way
+      // in; the all-access subscription is the second. Checking only the
+      // subscription would lock out everyone who actually paid for the course.
+      const courseId: string = levelSnap.get('skillId') ?? ''
+      const [purchaseSnap, userSnap] = await Promise.all([
+        db.collection('users').doc(uid).collection('purchases').doc(courseId).get(),
+        db.collection('users').doc(uid).get(),
+      ])
+      const owned = purchaseSnap.exists
+      if (!owned && !hasActiveEntitlement(userSnap.get('entitlement'))) {
+        throw new HttpsError('permission-denied', 'Buy this course to watch the lesson.')
       }
     }
 
